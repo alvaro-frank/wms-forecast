@@ -2,7 +2,10 @@ import pandas as pd
 import xgboost as xgb
 import os
 import joblib
-from sklearn.metrics import mean_squared_error
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.impute import SimpleImputer
 
 # Add src to path if running directly
 import sys
@@ -10,12 +13,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 
 from src.utils.data_split import prepare_datasets
 
-def train_xgboost(processed_data=None):
+def train_xgboost():
     """
     Trains an XGBoost model using data from data_split.py
-    
-    Args:
-        processed_data: Optional dictionary with data. If None, loads from data_split.
     """
     print("Preparing data for XGBoost...")
     
@@ -26,26 +26,41 @@ def train_xgboost(processed_data=None):
         print("No training data available.")
         return None
 
-    # Define features and target
-    FEATURES = train_data.columns.tolist()
-    TARGET = 'quantity_next_day'
-    
-    if TARGET in FEATURES:
-        FEATURES.remove(TARGET)
-        
-    print(f"Training with {len(FEATURES)} features.")
-    
-    # Check for non-numeric columns remaining
-    print("Features dtypes:")
-    print(train_data[FEATURES].dtypes)
+    features = ['QUANTITY', 'lag1', 'diff1', 'EWMA_05', 'EWMA_20', 'EWMA_50',
+            'Week sin', 'Week cos', 'Month sin', 'Month cos', 'Year sin', 'Year cos',
+            'is_weekend', 'is_portuguese_holiday', 'lag2', 'lag7', 'lag15',
+            'lag30', 'diff2', 'diff7', 'diff15', 'diff30']
 
-    X_train = train_data[FEATURES]
-    y_train = train_data[TARGET]
-    
-    X_val = val_data[FEATURES]
-    y_val = val_data[TARGET]
+    CAT_COLS = ['BRAND', 'PRODUCTHIERARCHY3']
+    NUM_COLS = features
 
-    # Initialize XGBoost Regressor with enable_categorical=True
+    numeric_pipe = Pipeline([
+        ("imputer", SimpleImputer(strategy="mean"))
+    ])
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("cat", OneHotEncoder(handle_unknown="ignore", sparse_output=True), CAT_COLS),
+            ("num", numeric_pipe, NUM_COLS),
+        ],
+        sparse_threshold=1.0
+    )
+
+    # Build X/y DATAFRAMES that include categoricals + numerics
+    X_train_df = train_data[CAT_COLS + NUM_COLS].copy()
+    y_train = train_data['quantity_next_day'].values
+
+    X_val_df = val_data[CAT_COLS + NUM_COLS].copy()
+    y_val = val_data['quantity_next_day'].values
+
+    X_test_df = test_data[CAT_COLS + NUM_COLS].copy()
+    y_test = test_data['quantity_next_day'].values
+
+    # Fit preprocessor on TRAIN only, transform all splits
+    X_train = preprocessor.fit_transform(X_train_df)
+    X_val = preprocessor.transform(X_val_df)
+    X_test = preprocessor.transform(X_test_df)
+
     reg = xgb.XGBRegressor(
         base_score=0.5,
         booster='gbtree',
@@ -58,7 +73,7 @@ def train_xgboost(processed_data=None):
         random_state=42,
         reg_lambda=10,
         reg_alpha=1,
-        enable_categorical=True # Enable support for categorical data
+        enable_categorical=True
     )
 
     # Train model
@@ -66,21 +81,16 @@ def train_xgboost(processed_data=None):
     reg.fit(
         X_train, y_train,
         eval_set=[(X_train, y_train), (X_val, y_val)],
-        verbose=100
+        verbose=True
     )
-    
-    # Feature Importance
-    feature_importance = pd.DataFrame(
-        data=reg.feature_importances_,
-        index=reg.feature_names_in_,
-        columns=['importance']
-    ).sort_values('importance', ascending=False)
-    
-    print("\nTop 5 Feature Importances:")
-    print(feature_importance.head())
 
     # Save model
     models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
+    
+    preprocessor_path = os.path.join(models_dir, 'preprocessor.joblib')
+    joblib.dump(preprocessor, preprocessor_path)
+    print(f"Preprocessor saved to {preprocessor_path}")
+    
     os.makedirs(models_dir, exist_ok=True)
     model_path = os.path.join(models_dir, 'xgboost_model.joblib')
     joblib.dump(reg, model_path)
