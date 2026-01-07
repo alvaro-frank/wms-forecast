@@ -34,11 +34,14 @@ def visualize_forecast(hier_code, brand_code):
 
     _, _, test_data = prepare_datasets()
     
-    print(f"Test Data Range: {test_data.index.min()} to {test_data.index.max()}")
-    
     # Load model
     if not os.path.exists(MODEL_PATH):
         print(f"Model not found at {MODEL_PATH}. Please train it first.")
+        return
+    
+    # Load preprocessor
+    if not os.path.exists(PREPROCESSOR_PATH):
+        print(f"Preprocessor not found at {PREPROCESSOR_PATH}.")
         return
 
     print(f"Loading model from {MODEL_PATH}...")
