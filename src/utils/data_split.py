@@ -12,25 +12,14 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from src.utils.data_handling import load_data
-try:
-    from src.utils.features import (
-        create_features,
-        add_weekday_weekend_flags,
-        add_holidays,
-        add_lags,
-        add_diff,
-        add_ewma,
-    )
-except ImportError:
-    # If features.py is not yet populated, defining dummies to prevent crash
-    print("Warning: src.utils.features not found or incomplete. Using dummy feature functions.")
-    def pass_through(df): return df
-    create_features = pass_through
-    add_weekday_weekend_flags = pass_through
-    add_holidays = pass_through
-    add_lags = pass_through
-    add_diff = pass_through
-    add_ewma = pass_through
+from src.utils.features import (
+    create_features,
+    add_weekday_weekend_flags,
+    add_holidays,
+    add_lags,
+    add_diff,
+    add_ewma,
+)
 
 # Define path to data
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -129,6 +118,3 @@ def prepare_datasets():
     test_data = test_data.drop(columns=columns_to_drop)
 
     return train_data, val_data, test_data
-
-# Load data on import
-train_data, val_data, test_data = prepare_datasets()
