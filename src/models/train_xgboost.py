@@ -13,7 +13,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 
 from src.utils.data_split import prepare_datasets
 
-def train_xgboost():
+def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
     """
     Trains an XGBoost model using data from data_split.py
     """
@@ -65,11 +65,11 @@ def train_xgboost():
         base_score=0.5,
         booster='gbtree',
         tree_method="hist",
-        n_estimators=10000,
+        n_estimators=n_estimators,
         early_stopping_rounds=50,
         objective='reg:squarederror',
-        max_depth=10,
-        learning_rate=0.01,
+        max_depth=max_depth,
+        learning_rate=learning_rate,
         random_state=42,
         reg_lambda=10,
         reg_alpha=1,
