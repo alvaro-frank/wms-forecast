@@ -12,7 +12,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
-from src.utils.data_split import test_data
+from src.utils.data_split import prepare_datasets
 
 def _smape(y_true, y_pred, eps=1e-8):
     # Calculates symmetric mean absolute percentage error
@@ -24,31 +24,24 @@ def _predict_nextday_xgb(df: pd.DataFrame,
                          preprocessor=None,
                          reg=None,
                          xgb_pipeline=None) -> pd.DataFrame:
-    # Predicts next-day quantity using XGBoost pipeline or regressor
-    if 'DATE' not in df.columns:
+    
+    if 'DATE' not in df.columns and isinstance(df.index, pd.DatetimeIndex):
         df = df.reset_index()
+    
     df = df.copy()
     
-    # Ensure categorical columns are converted to string or category type matching training
-    # For robust matching, often converting to string or category codes is done in preprocessor
-    # Here we assume model handles them if they are 'category' dtype
-    
-    # Also convert BRANDNAME and PRODUCTHIERARCHY3NAME if they are used as features
-    extended_cat_cols = list(cat_cols) + ['BRANDNAME', 'PRODUCTHIERARCHY3NAME']
-    
-    for col in extended_cat_cols:
+    # CRITICAL: Convert categories to strings for the OneHotEncoder (matching training)
+    for col in cat_cols:
         if col in df.columns:
-            df[col] = df[col].astype('category')
+            df[col] = df[col].astype(str)
 
     if 'quantity_next_day' not in df.columns:
-        raise ValueError("test_data must include 'quantity_next_day' (your shift label).")
+        raise ValueError("test_data must include 'quantity_next_day'.")
     y_true = df['quantity_next_day'].to_numpy(dtype=float)
 
-    # Use only valid features for prediction
-    # Ensure columns exist in df
-    valid_features = [f for f in features if f in df.columns]
-
-    X = df[valid_features]
+    # Use all columns expected by the preprocessor
+    # (The preprocessor selects what it needs by name)
+    X = df 
 
     if xgb_pipeline is not None:
         y_pred = xgb_pipeline.predict(X)
@@ -57,6 +50,7 @@ def _predict_nextday_xgb(df: pd.DataFrame,
             raise ValueError("Pass either xgb_pipeline OR reg.")
         
         if preprocessor is not None:
+            # Transform the data from 32 -> 96 features
             X = preprocessor.transform(X)
             
         y_pred = reg.predict(X)
@@ -175,31 +169,33 @@ if __name__ == "__main__":
     # Example execution if run directly
     import joblib
     
-    # Load model
-    # Assuming the script is run from project root, or src/eval
-    # Adjust path to find models folder relative to this script
-    model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'models', 'xgboost_model.joblib'))
-    
-    if os.path.exists(model_path):
-        print(f"Loading model from {model_path}")
-        reg = joblib.load(model_path)
+    MODEL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'models'))
+    MODEL_PATH = os.path.join(MODEL_DIR, 'xgboost_model.joblib')
+    PREPROCESSOR_PATH = os.path.join(MODEL_DIR, 'preprocessor.joblib')
+
+    if os.path.exists(MODEL_PATH):
+        print("Loading test data...")
+        _, _, test_data = prepare_datasets()
         
-        # Prepare feature list (must match training features)
-        # We infer features from test_data columns, excluding non-features
-        target = 'quantity_next_day'
-        # Also exclude names/date/y_true/y_pred/etc if present
-        # UPDATED: Removed NAME columns from exclude list to match training features
-        exclude = [target, 'DATE', 'y_true', 'y_pred']
-        features = [c for c in test_data.columns if c not in exclude]
+        print(f"Loading preprocessor from {PREPROCESSOR_PATH}")
+        preprocessor = joblib.load(PREPROCESSOR_PATH)
+
+        print(f"Loading model from {MODEL_PATH}")
+        reg = joblib.load(MODEL_PATH)
         
+        features = ['QUANTITY', 'lag1', 'diff1', 'EWMA_05', 'EWMA_20', 'EWMA_50',
+                    'Week sin', 'Week cos', 'Month sin', 'Month cos', 'Year sin', 'Year cos',
+                    'is_weekend', 'is_portuguese_holiday', 'lag2', 'lag7', 'lag15',
+                    'lag30', 'diff2', 'diff7', 'diff15', 'diff30',
+                    'BRAND', 'PRODUCTHIERARCHY3']
+
         print(f"Evaluating on {len(test_data)} test samples...")
-        print(f"Features: {len(features)}")
         
         try:
             xgb_metrics = all_pairs_metrics_on_test_xgb(
                 test_data=test_data,
                 features=features,
-                preprocessor=None,
+                preprocessor=preprocessor,
                 reg=reg
             )
             
@@ -209,13 +205,9 @@ if __name__ == "__main__":
             # Robust filtering
             mask = xgb_metrics['BRAND'].astype(str) == target_brand
             print(xgb_metrics[mask].head(10))
-            
-            print("\nTop 5 Overall Metrics (Tail):")
-            print(xgb_metrics.tail(5)) # Overall is usually at the end/concatenated
-            
         except Exception as e:
             print(f"Evaluation failed: {e}")
             import traceback
             traceback.print_exc()
     else:
-        print(f"Model file not found at {model_path}. Run training first.")
+        print(f"Model file not found at {MODEL_PATH}. Run training first.")
