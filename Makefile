@@ -2,6 +2,7 @@ PYTHON := py -3.10
 VENV_BIN := .venv\Scripts
 PY  := $(VENV_BIN)\python.exe
 MKVENV := if not exist .venv ( $(PYTHON) -m venv .venv )
+RMVENV := if exist .venv rmdir /s /q .venv
 MAIN_SCRIPT = src/main.py
 
 help:
@@ -16,6 +17,9 @@ setup:
 	$(MKVENV)
 	$(PY) -m pip install -r requirements.txt
 
+clean:
+	if exist .venv rmdir /s /q .venv
+
 train:
 	python $(MAIN_SCRIPT) train $(ARGS)
 
@@ -25,6 +29,6 @@ evaluate:
 test:
 	python $(MAIN_SCRIPT) test --model $(MODEL) --hierarchy $(HIER) --brand $(BRAND)
 
-all: setup train evaluate test
+all: clean setup train evaluate test
 
 .DEFAULT_GOAL := help
