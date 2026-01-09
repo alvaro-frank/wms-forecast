@@ -9,7 +9,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 def run_train(args):
     """Executa o treino do modelo escolhido."""
     if args.model == 'xgboost':
-        from src.models.train_xgboost import train_xgboost
+        from src.training.train_xgboost import train_xgboost
         # Passa os argumentos recebidos da linha de comandos para a função
         train_xgboost(
             learning_rate=args.learning_rate,

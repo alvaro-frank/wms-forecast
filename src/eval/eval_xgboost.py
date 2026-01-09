@@ -169,7 +169,7 @@ if __name__ == "__main__":
     # Example execution if run directly
     import joblib
     
-    MODEL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'models'))
+    MODEL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'training'))
     MODEL_PATH = os.path.join(MODEL_DIR, 'xgboost_model.joblib')
     PREPROCESSOR_PATH = os.path.join(MODEL_DIR, 'preprocessor.joblib')
 

@@ -85,7 +85,7 @@ def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
     )
 
     # Save model
-    models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
+    models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'training')
     
     preprocessor_path = os.path.join(models_dir, 'preprocessor.joblib')
     joblib.dump(preprocessor, preprocessor_path)

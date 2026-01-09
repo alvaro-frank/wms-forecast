@@ -6,7 +6,7 @@ Evaluates LSTM model performance on original (unnormalized) scale.
 
 from sklearn.metrics import mean_absolute_error
 
-from models.lstm import lstm, wide_window, train_mean, train_std, val_performance, performance
+from training.lstm import lstm, wide_window, train_mean, train_std, val_performance, performance
 
 def evaluate_on_original_scale(model, window, train_mean, train_std, quantity_column='QUANTITY'):
     """

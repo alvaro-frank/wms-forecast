@@ -25,4 +25,6 @@ evaluate:
 test:
 	python $(MAIN_SCRIPT) test --model $(MODEL) --hierarchy $(HIER) --brand $(BRAND)
 
+all: setup train evaluate test
+
 .DEFAULT_GOAL := help
