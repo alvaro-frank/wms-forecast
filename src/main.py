@@ -17,7 +17,15 @@ def run_train(args):
             n_estimators=args.n_estimators
         )
     elif args.model == 'lstm':
-        print("Treino LSTM ainda não configurado com argumentos.")
+        from src.training.train_lstm import train_lstm
+        # Passar argumentos específicos da LSTM
+        train_lstm(
+            time_steps=args.time_steps,
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            neurons=args.neurons,
+            learning_rate=args.learning_rate # Reutilizamos o LR
+        )
 
 def run_evaluate(args):
     """Executa a avaliação do modelo."""
@@ -93,8 +101,17 @@ def main():
     train_parser = subparsers.add_parser('train', help='Train models')
     train_parser.add_argument('--model', default='xgboost', choices=['xgboost', 'lstm'])
     train_parser.add_argument('--learning_rate', type=float, default=0.01)
+    
+    # Args XGBoost
     train_parser.add_argument('--max_depth', type=int, default=10)
     train_parser.add_argument('--n_estimators', type=int, default=10000)
+    
+    # Args LSTM
+    train_parser.add_argument('--time_steps', type=int, default=30, help='Lookback window (dias)')
+    train_parser.add_argument('--epochs', type=int, default=20)
+    train_parser.add_argument('--batch_size', type=int, default=32)
+    train_parser.add_argument('--neurons', type=int, default=64)
+    
     train_parser.set_defaults(func=run_train)
 
     # Comando: evaluate
