@@ -7,4 +7,3 @@ matplotlib==3.9.2
 holidays==0.56
 tqdm==4.66.5
 holidays
-pyswarms
