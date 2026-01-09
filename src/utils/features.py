@@ -1,18 +1,38 @@
 """
-Feature engineering utilities for time series forecasting.
-- Adds date/time features, cyclical encodings, lags, differences, EWMA, holidays, and weekday/weekend flags
-- Used for preparing model-ready datasets
+Feature Engineering Utilities
+-----------------------------
+Provides a collection of functions to generate features for time-series forecasting.
+Includes transformations for:
+- Temporal signals (Cyclical encoding of Week/Month/Year)
+- Calendar events (Holidays, Weekends)
+- Historical patterns (Lags, Differences, Moving Averages)
 """
 
 import numpy as np
 import pandas as pd
 import holidays
 
+# ==============================================================================
+# TIME-BASED FEATURES (CYCLICAL & RAW)
+# ==============================================================================
+
 def create_features(df):
     """
-    Adds date/time and cyclical features to the DataFrame.
+    Generates raw time features (Month, Year) and Cyclical encodings (Sin/Cos).
+    
+    Cyclical encoding preserves the continuity of time (e.g., Dec to Jan is close, 
+    just like 359° to 0°), which raw integers (1 to 12) fail to capture effectively.
+    
+    Args:
+        df (pd.DataFrame): Input dataframe with a DatetimeIndex.
+        
+    Returns:
+        pd.DataFrame: Dataframe with added time features.
     """
+    
     df = df.copy()
+    
+    # Raw Calendar Features
     df['DATE'] = df.index
     df['QUARTER'] = df['DATE'].dt.quarter
     df['MONTH'] = df['DATE'].dt.month
@@ -20,6 +40,7 @@ def create_features(df):
     df['DAYOFYEAR'] = df['DATE'].dt.dayofyear
     df['DAYOFMONTH'] = df['DATE'].dt.day
 
+    # Cyclical Encoding Setup
     timestamp = df.index.map(pd.Timestamp.timestamp)
 
     day = 24 * 60 * 60 
@@ -27,41 +48,66 @@ def create_features(df):
     month = 30.44 * day 
     year = (365.2425) * day 
 
+    # Weekly Cycle (Captures "Day of Week" continuity)
     df['Week sin'] = np.sin(timestamp * (2 * np.pi / week))
     df['Week cos'] = np.cos(timestamp * (2 * np.pi / week))
 
+    # Monthly Cycle (Captures "Day of Month" continuity)
     df['Month sin'] = np.sin(timestamp * (2 * np.pi / month))
     df['Month cos'] = np.cos(timestamp * (2 * np.pi / month))
 
+    # Yearly Cycle (Captures Seasonality)
     df['Year sin'] = np.sin(timestamp * (2 * np.pi / year))
     df['Year cos'] = np.cos(timestamp * (2 * np.pi / year))
 
     return df
 
+# ==============================================================================
+# CALENDAR EVENTS (FLAGS)
+# ==============================================================================
+
 def add_weekday_weekend_flags(df):
     """
-    Adds weekday and weekend flags to the DataFrame.
+    Adds numeric flags for Day of Week and Weekend status.
+    
+    Returns:
+        pd.DataFrame: Dataframe with 'WEEKDAY' (0-6) and 'is_weekend' (0/1).
     """
     df = df.copy()
     df['WEEKDAY'] = df.index.weekday
+    # 5 = Saturday, 6 = Sunday
     df['is_weekend'] = df['WEEKDAY'].apply(lambda x: 1 if x >= 5 else 0)
     return df
 
 def add_holidays(df):
     """
-    Adds a flag for Portuguese holidays to the DataFrame.
+    Adds binary flag for Portuguese National Holidays.
+    Using the 'holidays' library ensures dynamic calculation based on the year.
     """
+    
     portugal_holidays = holidays.Portugal()
     df = df.copy()
+    
+    # Check if the date index exists in the holiday calendar
     df['is_portuguese_holiday'] = df.index.to_series().map(lambda x: 1 if x in portugal_holidays else 0)
     return df
 
+# ==============================================================================
+# HISTORICAL FEATURES (LAGS, DIFFS, MOVING AVERAGES)
+# ==============================================================================
+
 def add_lags(df):
     """
-    Adds lag features for QUANTITY by product hierarchy and brand.
+    Generates Lag features (Past values) for specific time windows.
+    Crucial for Autoregressive models (AR) to learn from recent history.
+    
+    Lags: 1, 2, 7 (Weekly), 15, 30 (Monthly)
     """
+    
     df = df.copy()
     groupby_cols = ["PRODUCTHIERARCHY3", "BRAND"]
+    
+    # Shift data backwards by N days within each Product-Brand group
     df['lag1'] = df.groupby(groupby_cols)['QUANTITY'].shift(1)
     df['lag2'] = df.groupby(groupby_cols)['QUANTITY'].shift(2)
     df['lag7'] = df.groupby(groupby_cols)['QUANTITY'].shift(7)
@@ -71,8 +117,10 @@ def add_lags(df):
 
 def add_diff(df):
     """
-    Adds difference features for QUANTITY by product hierarchy and brand.
+    Generates Difference features (Velocity/Trend) to make data stationary.
+    Captures the rate of change between time steps.
     """
+    
     df = df.copy()
     groupby_cols = ["PRODUCTHIERARCHY3", "BRAND"]
     df['diff1'] = df.groupby(groupby_cols)['QUANTITY'].diff(1)
@@ -84,12 +132,21 @@ def add_diff(df):
 
 def add_ewma(df):
     """
-    Adds exponentially weighted moving averages for QUANTITY by product hierarchy and brand.
+    Adds Exponentially Weighted Moving Averages (EWMA).
+    Smoothes out noise while giving more weight to recent observations.
+    
+    Spans: 
+    - 5 (Short-term trend)
+    - 20 (Monthly trend)
+    - 50 (Quarterly trend)
     """
+    
     df = df.copy()
     groupby_cols = ["PRODUCTHIERARCHY3", "BRAND"]
+    
+    # Sort to ensure rolling window calculation is chronologically correct
     df = df.sort_values(['PRODUCTHIERARCHY3', 'BRAND', 'DATE'])
-
+    
     df['EWMA_05'] = df.groupby(groupby_cols)['QUANTITY'].transform(lambda x: x.ewm(span=5, adjust=False).mean())
     df['EWMA_20'] = df.groupby(groupby_cols)['QUANTITY'].transform(lambda x: x.ewm(span=20, adjust=False).mean())
     df['EWMA_50'] = df.groupby(groupby_cols)['QUANTITY'].transform(lambda x: x.ewm(span=50, adjust=False).mean())
