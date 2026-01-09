@@ -18,10 +18,10 @@ setup:
 	$(PY) -m pip install -r requirements.txt
 
 clean:
-	if exist .venv rmdir /s /q .venv
+	$(RMVENV)
 
 train:
-	python $(MAIN_SCRIPT) train $(ARGS)
+	python $(MAIN_SCRIPT) train --model $(MODEL) $(ARGS)
 
 evaluate:
 	python $(MAIN_SCRIPT) evaluate --model $(MODEL) $(if $(BRAND),--brand $(BRAND),)
