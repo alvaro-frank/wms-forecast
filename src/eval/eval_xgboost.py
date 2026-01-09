@@ -20,7 +20,7 @@ def _smape(y_true, y_pred, eps=1e-8):
 
 def _predict_nextday_xgb(df: pd.DataFrame,
                          features: list,
-                         cat_cols=('BRAND','PRODUCTHIERARCHY3'),
+                         cat_cols=('BRAND','PRODUCTHIERARCHY3', 'PRODUCTHIERARCHY1', 'PRODUCTHIERARCHY2'),
                          preprocessor=None,
                          reg=None,
                          xgb_pipeline=None) -> pd.DataFrame:

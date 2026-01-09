@@ -44,7 +44,7 @@ def run_evaluate(args):
                     'Week sin', 'Week cos', 'Month sin', 'Month cos', 'Year sin', 'Year cos',
                     'is_weekend', 'is_portuguese_holiday', 'lag2', 'lag7', 'lag15',
                     'lag30', 'diff2', 'diff7', 'diff15', 'diff30',
-                    'BRAND', 'PRODUCTHIERARCHY3']
+                    'BRAND', 'PRODUCTHIERARCHY3', 'PRODUCTHIERARCHY1', 'PRODUCTHIERARCHY2']
 
         print("--> Computing Metrics...")
         try:

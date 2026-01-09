@@ -31,7 +31,7 @@ def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
             'is_weekend', 'is_portuguese_holiday', 'lag2', 'lag7', 'lag15',
             'lag30', 'diff2', 'diff7', 'diff15', 'diff30']
 
-    CAT_COLS = ['BRAND', 'PRODUCTHIERARCHY3']
+    CAT_COLS = ['BRAND', 'PRODUCTHIERARCHY3', 'PRODUCTHIERARCHY1', 'PRODUCTHIERARCHY2']
     NUM_COLS = features
 
     numeric_pipe = Pipeline([

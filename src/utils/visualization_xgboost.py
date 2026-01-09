@@ -55,7 +55,7 @@ def visualize_forecast(hier_code, brand_code):
             'is_weekend', 'is_portuguese_holiday', 'lag2', 'lag7', 'lag15',
             'lag30', 'diff2', 'diff7', 'diff15', 'diff30']
 
-    CAT_COLS = ['BRAND', 'PRODUCTHIERARCHY3']
+    CAT_COLS = ['BRAND', 'PRODUCTHIERARCHY3', 'PRODUCTHIERARCHY1', 'PRODUCTHIERARCHY2']
     NUM_COLS = features
     
     mask = (test_data['PRODUCTHIERARCHY3'].astype(str) == str(hier_code)) & \
