@@ -6,6 +6,7 @@ Handles data loading, feature preprocessing (OneHotEncoding, Imputation),
 model training with early stopping, and artifact saving.
 """
 
+import numpy as np
 import pandas as pd
 import xgboost as xgb
 import os
@@ -33,13 +34,14 @@ def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
         learning_rate (float): Step size shrinkage used in update to prevent overfitting.
         max_depth (int): Maximum depth of a tree.
         n_estimators (int): Number of boosting rounds.
+        use_filtering (bool): Whether to filter for top brands only.
 
     Returns:
         xgb.XGBRegressor: The trained model object.
     """
     
     # 1. Load Data
-    print("Preparing data for XGBoost...")
+    print("Preparing data...")
     # Uses the robust split logic from utils
     train_data, val_data, test_data = prepare_datasets()
     
@@ -76,10 +78,10 @@ def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
     # 4. Prepare X and y Matrices
     # Filter DataFrames to only include relevant columns
     X_train_df = train_data[CAT_COLS + NUM_COLS].copy()
-    y_train = train_data['quantity_next_day'].values
+    y_train = np.log1p(train_data['quantity_next_day'].values)
 
     X_val_df = val_data[CAT_COLS + NUM_COLS].copy()
-    y_val = val_data['quantity_next_day'].values
+    y_val = np.log1p(val_data['quantity_next_day'].values)
 
     # 5. Fit & Transform Data
     X_train = preprocessor.fit_transform(X_train_df)

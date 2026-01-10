@@ -6,6 +6,7 @@ Capable of plotting a specific Product-Brand pair or automatically generating
 plots for all brands within a hierarchy if no brand is specified.
 """
 
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import joblib
@@ -86,7 +87,8 @@ def visualize_forecast(hier_code, brand_code):
         # Transform features using the loaded preprocessor
         X_sub = preprocessor.transform(hier_brand_df[CAT_COLS + NUM_COLS])
         # Predict
-        hier_brand_df['prediction'] = reg.predict(X_sub)
+        pred_log = reg.predict(X_sub)
+        hier_brand_df['prediction'] = np.expm1(pred_log)
     except Exception as e:
         print(f"Prediction failed: {e}")
         return
