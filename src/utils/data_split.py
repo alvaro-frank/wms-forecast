@@ -6,9 +6,10 @@ Prepares the final datasets for model training and evaluation.
 Key Steps:
 1. Loads raw data via 'data_handling.py'.
 2. Aggregates data to ensure unique Day-Product-Brand records.
-3. Splits data chronologically into Train (70%), Validation (20%), and Test (10%).
-4. Generates time-series features (Lags, Diff, EWMA) and calendar flags.
-5. Cleans up unused columns to produce lightweight DataFrames.
+3. FILTERS data to keep only top performing Brands and Hierarchies (New).
+4. Splits data chronologically into Train (70%), Validation (20%), and Test (10%).
+5. Generates time-series features (Lags, Diff, EWMA) and calendar flags.
+6. Cleans up unused columns to produce lightweight DataFrames.
 """
 
 import pandas as pd
@@ -19,6 +20,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from src.utils.data_handling import load_data
+from src.utils.filtering import filter_top_brands_and_hierarchies # <--- NEW IMPORT
 from src.utils.features import (
     create_features,
     add_weekday_weekend_flags,
@@ -47,7 +49,9 @@ def prepare_datasets():
     Returns:
         tuple: (train_data, val_data, test_data) as pandas DataFrames.
     """
+    
     # 1. Load Data
+    # --------------------------------------------------------------------------
     df = load_data(DATA_PATH)
     
     # Ensure IDs are strings and Dates are datetime objects
@@ -56,10 +60,12 @@ def prepare_datasets():
     df['DATE'] = pd.to_datetime(df['DATE'])
 
     # 2. Aggregation
+    # --------------------------------------------------------------------------
     # Ensure only one row per Product-Brand-Date by summing quantities
     groupby_cols = ["PRODUCTHIERARCHY3", "BRAND"]
+    
     if all(col in df.columns for col in ['DATE', 'PRODUCTHIERARCHY3', 'BRAND', 'QUANTITY']):
-        # Aggregate: Sum Quantity, keep the first occurrence of static columns (names, etc.)
+        # Aggregate: Sum Quantity, keep the first occurrence of static columns
         df = df.groupby(
             ['DATE', 'PRODUCTHIERARCHY3', 'BRAND'], as_index=False
         ).agg(
@@ -67,8 +73,20 @@ def prepare_datasets():
             {'QUANTITY': 'sum'}
         )
     
-    # 3. Chronological Split
-    final_filtered_df = df.sort_values(by=['DATE'])
+    # 3. Data Filtering (Top Brands & Hierarchies)
+    # --------------------------------------------------------------------------
+    # Reduces dataset noise by keeping only the most relevant entities.
+    # Logic moved to src/utils/filtering.py for cleanliness.
+    print("Filtering Top 10 Brands & Top 10 Hierarchies per Brand...")
+    final_filtered_df = filter_top_brands_and_hierarchies(
+        df, 
+        top_n_brands=10, 
+        top_n_hier=10
+    )
+    
+    # 4. Chronological Split
+    # --------------------------------------------------------------------------
+    final_filtered_df = final_filtered_df.sort_values(by=['DATE'])
     n = len(final_filtered_df)
     
     # 70% Train, 20% Val, 10% Test
@@ -76,8 +94,8 @@ def prepare_datasets():
     val_data = final_filtered_df[int(n*0.7):int(n*0.9)].copy()
     test_data = final_filtered_df[int(n*0.9):].copy()
 
-    # 4. Target Creation (Next Day Quantity)
-    # Shift(-1) moves tomorrow's value to today's row (grouped by series ID)
+    # 5. Target Creation (Next Day Quantity)
+    # --------------------------------------------------------------------------
     train_data['quantity_next_day'] = train_data.groupby(groupby_cols)['QUANTITY'].shift(-1)
     val_data['quantity_next_day'] = val_data.groupby(groupby_cols)['QUANTITY'].shift(-1)
     test_data['quantity_next_day'] = test_data.groupby(groupby_cols)['QUANTITY'].shift(-1)
@@ -87,28 +105,30 @@ def prepare_datasets():
     val_data = val_data.dropna()
     test_data = test_data.dropna()
 
-    # 5. Feature Engineering
-    # A. Lag Features (Previous values)
+    # 6. Feature Engineering
+    # --------------------------------------------------------------------------
+    
+    # A. Lag Features
     train_data = add_lags(train_data)
     val_data = add_lags(val_data)
     test_data = add_lags(test_data)
 
-    # B. Difference Features (Velocity/Trend)
+    # B. Difference Features
     train_data = add_diff(train_data)
     val_data = add_diff(val_data)
     test_data = add_diff(test_data)
 
-    # C. Moving Averages (EWMA)
+    # C. Moving Averages
     train_data = add_ewma(train_data)
     val_data = add_ewma(val_data)
     test_data = add_ewma(test_data)
 
-    # Set Date Index for time-based features
+    # Set Date Index
     train_data = train_data.set_index('DATE')
     val_data = val_data.set_index('DATE')
     test_data = test_data.set_index('DATE')
 
-    # D. Calendar Features (Holidays, Weekends)
+    # D. Calendar Features
     train_data = add_holidays(train_data)
     val_data = add_holidays(val_data)
     test_data = add_holidays(test_data)
@@ -122,13 +142,13 @@ def prepare_datasets():
     val_data = val_data.sort_values(['DATE', 'PRODUCTHIERARCHY3', 'BRAND'])
     test_data = test_data.sort_values(['DATE', 'PRODUCTHIERARCHY3', 'BRAND'])
 
-    # E. Cyclic Features (Sin/Cos for Month, Week, Year)
+    # E. Cyclic Features
     train_data = create_features(train_data)
     val_data = create_features(val_data)
     test_data = create_features(test_data)
 
-    # 6. Cleanup
-    # Remove raw columns that are no longer needed or cause noise
+    # 7. Cleanup
+    # --------------------------------------------------------------------------
     columns_to_drop = [
         'UNITMEASURE',
         'INITIALDEPOSIT',
@@ -146,9 +166,11 @@ def prepare_datasets():
         'PRODUCT',
         'PRODUCTNAME',
     ]
-
-    train_data = train_data.drop(columns=columns_to_drop)
-    val_data = val_data.drop(columns=columns_to_drop)
-    test_data = test_data.drop(columns=columns_to_drop)
+    
+    # Robust drop
+    for df_split in [train_data, val_data, test_data]:
+        existing_drop = [c for c in columns_to_drop if c in df_split.columns]
+        if existing_drop:
+            df_split.drop(columns=existing_drop, inplace=True)
 
     return train_data, val_data, test_data

@@ -67,7 +67,8 @@ def _predict_nextday_xgb(df: pd.DataFrame,
         if preprocessor is not None:
             X = preprocessor.transform(X)
             
-        y_pred = reg.predict(X)
+        y_pred_log = reg.predict(X)
+        y_pred = np.expm1(y_pred_log)
 
     # 5. Format Output
     out = df[['DATE','BRAND','PRODUCTHIERARCHY3']].copy()
