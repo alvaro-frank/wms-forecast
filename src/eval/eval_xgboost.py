@@ -230,10 +230,14 @@ if __name__ == "__main__":
         
         # 3. Define Features
         features = ['QUANTITY', 'lag1', 'diff1', 'EWMA_05', 'EWMA_20', 'EWMA_50',
-                    'Week sin', 'Week cos', 'Month sin', 'Month cos', 'Year sin', 'Year cos',
-                    'is_weekend', 'is_portuguese_holiday', 'lag2', 'lag7', 'lag15',
-                    'lag30', 'diff2', 'diff7', 'diff15', 'diff30',
-                    'BRAND', 'PRODUCTHIERARCHY3']
+                'Week sin', 'Week cos', 'Month sin', 'Month cos', 'Year sin', 'Year cos',
+                'is_weekend', 'is_portuguese_holiday', 
+                'BRAND', 'PRODUCTHIERARCHY3', 'PRODUCTHIERARCHY1', 'PRODUCTHIERARCHY2',
+                'is_black_friday_week', 
+                'is_pre_christmas', 
+                'is_post_holiday_slump', 
+                'is_payday_zone',
+                'days_to_christmas']
 
         print(f"Evaluating on {len(test_data)} test samples...")
         
