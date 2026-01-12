@@ -92,6 +92,54 @@ def add_holidays(df):
     df['is_portuguese_holiday'] = df.index.to_series().map(lambda x: 1 if x in portugal_holidays else 0)
     return df
 
+def add_calendar_events(df):
+    """
+    Adds manual event features to simulate promotions and seasonality.
+    """
+    if 'DATE' not in df.columns and isinstance(df.index, pd.DatetimeIndex):
+        df = df.reset_index()
+    
+    # Garantir datetime
+    df['DATE'] = pd.to_datetime(df['DATE'])
+    
+    # 1. Black Friday (Aprox. última sexta de Novembro)
+    # Normalmente o pico dura a "Black Week" inteira
+    # Vamos marcar a última semana de Novembro como "Alta Probabilidade de Promo"
+    df['is_black_friday_week'] = df['DATE'].apply(
+        lambda x: 1 if (x.month == 11 and x.day >= 23) else 0
+    )
+
+    # 2. Época de Natal (1 a 23 de Dezembro)
+    df['is_pre_christmas'] = df['DATE'].apply(
+        lambda x: 1 if (x.month == 12 and 1 <= x.day <= 23) else 0
+    )
+
+    # 3. "Ressaca" de Ano Novo (Janeiro fraco)
+    df['is_post_holiday_slump'] = df['DATE'].apply(
+        lambda x: 1 if (x.month == 1 and x.day <= 15) else 0
+    )
+
+    # 4. Payday Effect (Dias 28, 29, 30, 31 e dia 1)
+    # As pessoas compram mais quando recebem o salário
+    df['is_payday_zone'] = df['DATE'].apply(
+        lambda x: 1 if (x.day >= 28 or x.day == 1) else 0
+    )
+    
+    # 5. Contagem Regressiva para o Natal (Feature contínua muito forte)
+    # Ajuda o modelo a entender a "urgência" de compra
+    def get_days_to_xmas(d):
+        if d.month == 12 and d.day <= 25:
+            return 25 - d.day
+        return 0 # Fora de dezembro ignoramos
+        
+    df['days_to_christmas'] = df['DATE'].apply(get_days_to_xmas)
+
+    # Voltar a por o indice se necessário
+    if 'DATE' in df.columns:
+        df = df.set_index('DATE', drop=False)
+        
+    return df
+
 # ==============================================================================
 # HISTORICAL FEATURES (LAGS, DIFFS, MOVING AVERAGES)
 # ==============================================================================
