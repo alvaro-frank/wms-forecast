@@ -56,7 +56,7 @@ def run_evaluate(args):
     
     if args.model == 'xgboost':
         from src.eval.eval_xgboost import all_pairs_metrics_on_test_xgb
-        MODEL_DIR = os.path.join(os.path.dirname(__file__), '..', 'models')
+        MODEL_DIR = os.path.join(os.path.dirname(__file__), '..', 'models/xgboost')
         MODEL_PATH = os.path.join(MODEL_DIR, 'xgboost_model.joblib')
         PREPROCESSOR_PATH = os.path.join(MODEL_DIR, 'preprocessor.joblib')
         
@@ -91,7 +91,7 @@ def run_evaluate(args):
         from src.eval.eval_lstm import evaluate_lstm
         
         # Try to load metadata if it exists
-        meta_path = os.path.join(os.path.dirname(__file__), '..', 'models', 'lstm_metadata.joblib')
+        meta_path = os.path.join(os.path.dirname(__file__), '..', 'models/lstm', 'lstm_metadata.joblib')
         time_steps = 30
         if os.path.exists(meta_path):
             meta = joblib.load(meta_path)
@@ -119,7 +119,8 @@ def run_visualize(args):
         from src.utils.visualization_xgboost import visualize_forecast
         visualize_forecast(args.hierarchy, args.brand)
     elif args.model == 'lstm':
-        print("Treino LSTM ainda não configurado com argumentos.")
+        from src.utils.visualization_lstm import visualize_forecast_lstm
+        visualize_forecast_lstm(args.hierarchy, args.brand)
 
 def main():
     parser = argparse.ArgumentParser(description="WMS Forecast CLI")

@@ -24,7 +24,7 @@ from src.utils.data_split import prepare_datasets
 # ==============================================================================
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-MODEL_DIR = os.path.join(ROOT_DIR, 'models')
+MODEL_DIR = os.path.join(ROOT_DIR, 'models/lstm')
 
 # Paths
 MODEL_PATH = os.path.join(MODEL_DIR, 'lstm_model.keras')
@@ -225,4 +225,4 @@ def visualize_forecast_lstm(hier_code, brand_code):
     print(f"Multi-step plot saved to: {output_path}")
 
 if __name__ == "__main__":
-    visualize_forecast_lstm('1090000600002.0', '1791.0')
+    visualize_forecast_lstm('1060000100001.0', '1487.0')

@@ -118,7 +118,7 @@ def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
     )
 
     # 8. Save Artifacts
-    models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
+    models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models/xgboost')
     
     # Save Preprocessor (Critical for inference consistency)
     preprocessor_path = os.path.join(models_dir, 'preprocessor.joblib')

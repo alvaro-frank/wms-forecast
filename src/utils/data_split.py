@@ -20,7 +20,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from src.utils.data_handling import load_data
-from src.utils.filtering import filter_top_brands_and_hierarchies # <--- NEW IMPORT
+from src.utils.filtering import filter_top_brands_and_hierarchies
 from src.utils.features import (
     create_features,
     add_weekday_weekend_flags,

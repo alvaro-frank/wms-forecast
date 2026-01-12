@@ -34,8 +34,8 @@ from src.utils.data_split import prepare_datasets
 
 def quantile_loss(q, y_true, y_pred):
     """
-    Pinball Loss para Quantile Regression.
-    q: O quantil desejado (ex: 0.90 para ser agressivo/otimista).
+    Pinball Loss for Quantile Regression.
+    q: The quantile to be estimated (e.g., 0.9 for 90th percentile).
     """
     e = y_true - y_pred
     return K.mean(K.maximum(q * e, (q - 1) * e), axis=-1)
@@ -196,7 +196,7 @@ def train_lstm(time_steps=30, forecast_horizon=7, epochs=20, batch_size=32, neur
 
     # 7. Save Artifacts
     # --------------------------------------------------------------------------
-    models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
+    models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models/lstm')
     os.makedirs(models_dir, exist_ok=True)
 
     model.save(os.path.join(models_dir, 'lstm_model.keras'))

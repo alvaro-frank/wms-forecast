@@ -77,7 +77,7 @@ def evaluate_lstm(test_data, time_steps=30, forecast_horizon=7):
     Runs the full evaluation pipeline for Multi-Step LSTM.
     """
     # 1. Load Artifacts
-    MODEL_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'models')
+    MODEL_DIR = os.path.join(os.path.dirname(__file__), '..', '..', 'models/lstm')
     MODEL_PATH = os.path.join(MODEL_DIR, 'lstm_model.keras')
     PREPROC_PATH = os.path.join(MODEL_DIR, 'lstm_preprocessor.joblib')
     TARGET_SCALER_PATH = os.path.join(MODEL_DIR, 'lstm_target_scaler.joblib')
