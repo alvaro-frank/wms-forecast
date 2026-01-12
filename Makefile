@@ -21,13 +21,13 @@ clean:
 	$(RMVENV)
 
 train:
-	python $(MAIN_SCRIPT) train --model $(MODEL) $(ARGS)
+	$(PY) $(MAIN_SCRIPT) train --model $(MODEL) $(ARGS)
 
 evaluate:
-	python $(MAIN_SCRIPT) evaluate --model $(MODEL) $(if $(BRAND),--brand $(BRAND),)
+	$(PY) $(MAIN_SCRIPT) evaluate --model $(MODEL) $(if $(BRAND),--brand $(BRAND),)
 
 test:
-	python $(MAIN_SCRIPT) test --model $(MODEL) --hierarchy $(HIER) --brand $(BRAND)
+	$(PY) $(MAIN_SCRIPT) test --model $(MODEL) --hierarchy $(HIER) --brand $(BRAND)
 
 all: clean setup train evaluate test
 
