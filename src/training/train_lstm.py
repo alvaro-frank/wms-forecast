@@ -1,12 +1,12 @@
 """
-LSTM Training Module (Standard Implementation)
-----------------------------------------------
-Trains a Long Short-Term Memory (LSTM) neural network for 1-day forecasting.
+LSTM Training Module
+------------------------------------------------
+Trains a Long Short-Term Memory (LSTM) network for MULTI-STEP forecasting.
 
-Approach:
-- Uses a standard sliding window technique to create 3D arrays (N, T, F).
-- Loads data into memory (RAM) for faster training loop execution.
-- Predicts the target value associated with the last step of the input window.
+Key Changes:
+- Target (y) is now a vector of 'forecast_horizon' days (e.g., 7 days).
+- Uses Log Transformation on targets to handle sales spikes.
+- Model output layer size equals 'forecast_horizon'.
 """
 
 import numpy as np
@@ -21,6 +21,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder, MinMaxScaler
 from sklearn.impute import SimpleImputer
+import tensorflow.keras.backend as K
 
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -31,36 +32,46 @@ from src.utils.data_split import prepare_datasets
 # HELPER FUNCTIONS
 # ==============================================================================
 
-def create_sequences(X, y, time_steps=30):
+def quantile_loss(q, y_true, y_pred):
     """
-    Transforms 2D data into 3D sequences for LSTM consumption.
+    Pinball Loss para Quantile Regression.
+    q: O quantil desejado (ex: 0.90 para ser agressivo/otimista).
+    """
+    e = y_true - y_pred
+    return K.mean(K.maximum(q * e, (q - 1) * e), axis=-1)
+
+def create_sequences_multistep(X, y_data, time_steps=30, horizon=7):
+    """
+    Transforms 2D data into 3D sequences for Multi-Step LSTM.
     
     Structure:
-    - Input (X): A sliding window of historical features of length 'time_steps'.
-    - Target (y): The target value corresponding to the LAST step of that window.
-      (Since our dataframe already has 'quantity_next_day' aligned, we take the 
-       target from the last row of the sequence).
+    - Input (X): Window of 'time_steps' (e.g., 30 days).
+    - Target (y): Vector of 'horizon' future steps (e.g., next 7 days).
     
     Args:
-        X (np.array): Feature matrix (2D).
-        y (np.array): Target vector (1D).
+        X (np.array): Feature matrix (Scaled).
+        y_data (np.array): Target vector (Scaled Log Quantity).
         time_steps (int): Lookback window size.
+        horizon (int): Number of days to predict.
         
     Returns:
-        tuple: (Xs, ys).
+        tuple: (Xs, ys)
     """
     Xs, ys = [], []
     
-    # Iterate through the array to create sequences
-    # We stop when i + time_steps exceeds the array length
-    for i in range(len(X) - time_steps + 1):
-        # Slice the window [i : i+30]
-        v = X[i:(i + time_steps)]
-        Xs.append(v)
+    # We iterate until we run out of data for the horizon
+    # Limit = Length - Lookback - Horizon + 1
+    num_samples = len(X) - time_steps - horizon + 1
+    
+    for i in range(num_samples):
+        # 1. Input: Days [i] to [i + 30]
+        v_x = X[i:(i + time_steps)]
+        Xs.append(v_x)
         
-        # Taking the target from the last step of the window
-        # Because row 't' in our DF already contains the target 'next_day' for t.
-        ys.append(y[i + time_steps - 1])
+        # 2. Target: Days [i + 30] to [i + 30 + 7]
+        # We grab the 'horizon' steps immediately following the input window
+        v_y = y_data[i + time_steps : i + time_steps + horizon]
+        ys.append(v_y.flatten()) # Flatten to ensure shape (7,)
         
     return np.array(Xs), np.array(ys)
 
@@ -68,19 +79,19 @@ def create_sequences(X, y, time_steps=30):
 # MAIN TRAINING LOGIC
 # ==============================================================================
 
-def train_lstm(time_steps=30, epochs=20, batch_size=32, neurons=64, learning_rate=0.001, dropout=0.2):
+def train_lstm(time_steps=30, forecast_horizon=7, epochs=20, batch_size=32, neurons=64, learning_rate=0.001, dropout=0.2):
     """
     Trains the LSTM model using explicit 3D Numpy arrays.
     
     Args:
         use_filtering (bool): If True, uses only Top Brands/Hierarchies data.
     """
-    print(f"Starting LSTM Training (Standard)")
-    print(f"    Config: Lookback={time_steps}, Neurons={neurons}, Dropout={dropout}, LR={learning_rate}")
+    print(f"Starting LSTM Training")
+    print(f"    Config: Lookback={time_steps}, Horizon={forecast_horizon}, Neurons={neurons}, Dropout={dropout}, LR={learning_rate}")
     
     # 1. Load Data
     # --------------------------------------------------------------------------
-    train_df, val_df, test_df = prepare_datasets()
+    train_df, val_df, _ = prepare_datasets()
 
     if train_df.empty:
         print("Error: No training data available.")
@@ -91,12 +102,17 @@ def train_lstm(time_steps=30, epochs=20, batch_size=32, neurons=64, learning_rat
     features = ['QUANTITY', 'lag1', 'diff1', 'EWMA_05', 'EWMA_20', 'EWMA_50',
                 'Week sin', 'Week cos', 'Month sin', 'Month cos', 'Year sin', 'Year cos',
                 'is_weekend', 'is_portuguese_holiday', 
-                'BRAND', 'PRODUCTHIERARCHY3', 'PRODUCTHIERARCHY1', 'PRODUCTHIERARCHY2']
+                'BRAND', 'PRODUCTHIERARCHY3', 'PRODUCTHIERARCHY1', 'PRODUCTHIERARCHY2',
+                'is_black_friday_week', 
+                'is_pre_christmas', 
+                'is_post_holiday_slump', 
+                'is_payday_zone',
+                'days_to_christmas']
     
     cat_cols = ['BRAND', 'PRODUCTHIERARCHY3', 'PRODUCTHIERARCHY1', 'PRODUCTHIERARCHY2']
     num_cols = [f for f in features if f not in cat_cols]
     
-    target_col = 'quantity_next_day'
+    target_source_col = 'QUANTITY'
 
     # 3. Preprocessing (Scaling)
     # --------------------------------------------------------------------------
@@ -124,23 +140,23 @@ def train_lstm(time_steps=30, epochs=20, batch_size=32, neurons=64, learning_rat
     
     print("Applying Log Transformation to Target...")
     
-    y_train_log = np.log1p(train_df[[target_col]])
-    y_val_log = np.log1p(val_df[[target_col]])
+    y_train_log = np.log1p(train_df[[target_source_col]])
+    y_val_log = np.log1p(val_df[[target_source_col]])
     
     # Process Target (y) - Important for MSE loss stability
     target_scaler = MinMaxScaler()
-    y_train_processed = target_scaler.fit_transform(y_train_log)
-    y_val_processed = target_scaler.transform(y_val_log)
+    y_train_scaled = target_scaler.fit_transform(y_train_log)
+    y_val_scaled = target_scaler.transform(y_val_log)
 
-    # 4. Create 3D Sequences
+    # 4. Create Multi-Step Sequences
     # --------------------------------------------------------------------------
-    print(f"Creating Sequences (Time Steps: {time_steps})...")
+    print(f"Creating Multi-Step Sequences (X={time_steps}, y={forecast_horizon})...")
     
-    X_train_seq, y_train_seq = create_sequences(X_train_processed, y_train_processed, time_steps)
-    X_val_seq, y_val_seq = create_sequences(X_val_processed, y_val_processed, time_steps)
+    X_train_seq, y_train_seq = create_sequences_multistep(X_train_processed, y_train_scaled, time_steps, forecast_horizon)
+    X_val_seq, y_val_seq = create_sequences_multistep(X_val_processed, y_val_scaled, time_steps, forecast_horizon)
 
     print(f"    Train Input Shape: {X_train_seq.shape} (Samples, Steps, Features)")
-    print(f"    Val Input Shape:   {X_val_seq.shape}")
+    print(f"    Train Target Shape: {y_train_seq.shape} (Samples, Horizon)")
 
     # 5. Build Model Architecture
     # --------------------------------------------------------------------------
@@ -155,11 +171,13 @@ def train_lstm(time_steps=30, epochs=20, batch_size=32, neurons=64, learning_rat
         tf.keras.layers.Dropout(dropout),
         
         # Output Layer
-        tf.keras.layers.Dense(1)
+        tf.keras.layers.Dense(forecast_horizon)
     ])
+    
+    quantile = 0.80
 
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), 
-                  loss='mse', 
+                  loss=lambda y, f: quantile_loss(quantile, y, f), 
                   metrics=['mae'])
 
     # 6. Train
@@ -186,7 +204,13 @@ def train_lstm(time_steps=30, epochs=20, batch_size=32, neurons=64, learning_rat
     joblib.dump(preprocessor, os.path.join(models_dir, 'lstm_preprocessor.joblib'))
     joblib.dump(target_scaler, os.path.join(models_dir, 'lstm_target_scaler.joblib'))
     
-    print("Model, Preprocessor, and Target Scaler saved.")
+    metadata = {
+        'time_steps': time_steps, 
+        'forecast_horizon': forecast_horizon
+    }
+    joblib.dump(metadata, os.path.join(models_dir, 'lstm_metadata.joblib'))
+    
+    print("Model, Preprocessor, Target Scaler and Metadata saved.")
     return model
 
 if __name__ == "__main__":
