@@ -25,6 +25,7 @@ from src.utils.features import (
     create_features,
     add_weekday_weekend_flags,
     add_holidays,
+    add_calendar_events,
     add_lags,
     add_diff,
     add_ewma,
@@ -141,6 +142,10 @@ def prepare_datasets():
     train_data = train_data.sort_values(['DATE', 'PRODUCTHIERARCHY3', 'BRAND'])
     val_data = val_data.sort_values(['DATE', 'PRODUCTHIERARCHY3', 'BRAND'])
     test_data = test_data.sort_values(['DATE', 'PRODUCTHIERARCHY3', 'BRAND'])
+    
+    train_data = add_calendar_events(train_data)
+    val_data = add_calendar_events(val_data)
+    test_data = add_calendar_events(test_data)
 
     # E. Cyclic Features
     train_data = create_features(train_data)
