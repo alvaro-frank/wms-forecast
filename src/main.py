@@ -36,6 +36,7 @@ def run_train(args):
         from src.training.train_lstm import train_lstm
         train_lstm(
             time_steps=args.time_steps,
+            forecast_horizon=args.forecast_horizon,
             epochs=args.epochs,
             batch_size=args.batch_size,
             neurons=args.neurons,
@@ -136,6 +137,7 @@ def main():
     
     # Args LSTM
     train_parser.add_argument('--time_steps', type=int, default=30)
+    train_parser.add_argument('--forecast_horizon', type=int, default=7)
     train_parser.add_argument('--epochs', type=int, default=20)
     train_parser.add_argument('--batch_size', type=int, default=32)
     train_parser.add_argument('--neurons', type=int, default=64)
