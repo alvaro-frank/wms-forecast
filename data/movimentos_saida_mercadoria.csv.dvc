@@ -1,0 +1,5 @@
+outs:
+- md5: 996fdb6758f2f3d60616214b284ec398
+  size: 625767184
+  hash: md5
+  path: movimentos_saida_mercadoria.csv
