@@ -4,6 +4,7 @@ PY  := $(VENV_BIN)\python.exe
 MKVENV := if not exist .venv ( $(PYTHON) -m venv .venv )
 RMVENV := if exist .venv rmdir /s /q .venv
 MAIN_SCRIPT = src/main.py
+PORT = 5000
 
 help:
 	@echo "WMS Forecast - Available commands:"
@@ -32,6 +33,9 @@ evaluate:
 
 test:
 	$(PY) $(MAIN_SCRIPT) test --model $(MODEL) --hierarchy $(HIER) --brand $(BRAND)
+
+mlflow:
+	$(VENV_BIN)\mlflow ui --port $(PORT)
 
 all: clean setup train evaluate test
 
