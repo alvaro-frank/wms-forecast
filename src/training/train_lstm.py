@@ -15,8 +15,8 @@ import tensorflow as tf
 import joblib
 import os
 import sys
-
-# Import Sklearn tools
+import mlflow
+import mlflow.tensorflow
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder, MinMaxScaler
@@ -74,6 +74,38 @@ def create_sequences_multistep(X, y_data, time_steps=30, horizon=7):
         ys.append(v_y.flatten()) # Flatten to ensure shape (7,)
         
     return np.array(Xs), np.array(ys)
+
+def calc_metrics_real_scale(y_true_scaled, y_pred_scaled, scaler):
+    """
+    Inverse transforms scaled log data to real quantity and calculates metrics.
+    Returns: Dict of metrics and Real Scale arrays for plotting.
+    """
+    # 1. Inverse Scale (0-1 -> Log Scale)
+    y_true_log = scaler.inverse_transform(y_true_scaled)
+    y_pred_log = scaler.inverse_transform(y_pred_scaled)
+    
+    # 2. Inverse Log (Log -> Real Quantity)
+    y_true_real = np.expm1(y_true_log)
+    y_pred_real = np.expm1(y_pred_log)
+    
+    # 3. Compute Global Metrics
+    mae = np.mean(np.abs(y_true_real - y_pred_real))
+    rmse = np.sqrt(np.mean((y_true_real - y_pred_real)**2))
+    
+    # 4. Compute Step-Specific Metrics
+    # Day 1 MAE (First column)
+    mae_day1 = np.mean(np.abs(y_true_real[:, 0] - y_pred_real[:, 0]))
+    # Day 7 MAE (Last column)
+    mae_day7 = np.mean(np.abs(y_true_real[:, -1] - y_pred_real[:, -1]))
+    
+    metrics = {
+        "mae_global": mae,
+        "rmse_global": rmse,
+        "mae_day1": mae_day1,
+        "mae_day7": mae_day7
+    }
+    
+    return metrics
 
 # ==============================================================================
 # MAIN TRAINING LOGIC
@@ -175,40 +207,72 @@ def train_lstm(time_steps=30, forecast_horizon=7, epochs=20, batch_size=32, neur
     ])
     
     quantile = 0.80
-
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), 
-                  loss=lambda y, f: quantile_loss(quantile, y, f), 
-                  metrics=['mae'])
-
-    # 6. Train
-    # --------------------------------------------------------------------------
-    print("Fitting LSTM model...")
-    early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
-
-    history = model.fit(
-        X_train_seq, y_train_seq,
-        epochs=epochs,
-        batch_size=batch_size,
-        validation_data=(X_val_seq, y_val_seq),
-        callbacks=[early_stop],
-        verbose=1
-    )
-
-    # 7. Save Artifacts
-    # --------------------------------------------------------------------------
-    models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models/lstm')
-    os.makedirs(models_dir, exist_ok=True)
-
-    model.save(os.path.join(models_dir, 'lstm_model.keras'))
     
-    joblib.dump(preprocessor, os.path.join(models_dir, 'lstm_preprocessor.joblib'))
-    joblib.dump(target_scaler, os.path.join(models_dir, 'lstm_target_scaler.joblib'))
-    
-    metadata = {
-        'time_steps': time_steps, 
-        'forecast_horizon': forecast_horizon
-    }
-    joblib.dump(metadata, os.path.join(models_dir, 'lstm_metadata.joblib'))
+    print("Starting MLflow Run...")
+    with mlflow.start_run(run_name="LSTM_Multistep"):
+        model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate), 
+                    loss=lambda y, f: quantile_loss(quantile, y, f), 
+                    metrics=['mae'])
+        
+        mlflow.log_params({
+            "model_type": "lstm_multistep",
+            "time_steps": time_steps,
+            "forecast_horizon": forecast_horizon,
+            "neurons": neurons,
+            "epochs": epochs,
+            "batch_size": batch_size,
+            "dropout": dropout,
+            "learning_rate": learning_rate
+        })
+
+        # 6. Train
+        # --------------------------------------------------------------------------
+        print("Fitting LSTM model...")
+        early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
+
+        history = model.fit(
+            X_train_seq, y_train_seq,
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_data=(X_val_seq, y_val_seq),
+            callbacks=[early_stop],
+            verbose=1
+        )
+        
+        print("Calculating Real Scale Metrics...")
+        y_val_pred_scaled = model.predict(X_val_seq, verbose=0)
+        
+        metrics = calc_metrics_real_scale(y_val_seq, y_val_pred_scaled, target_scaler)
+        
+        print(f"Metrics: MAE={metrics['mae_global']:.2f}, Day1={metrics['mae_day1']:.2f}, Day7={metrics['mae_day7']:.2f}")
+        mlflow.log_metrics(metrics)
+        
+        print("Logging Model and Artifacts...")
+        mlflow.tensorflow.log_model(model, artifact_path="lstm_multistep")
+        
+        # 7. Save Artifacts
+        # --------------------------------------------------------------------------
+        models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models/lstm')
+        os.makedirs(models_dir, exist_ok=True)
+        
+        local_model_path = os.path.join(models_dir, 'lstm_model.keras')
+        model.save(local_model_path)
+
+        joblib.dump(preprocessor, os.path.join(models_dir, 'lstm_preprocessor.joblib'))
+        joblib.dump(target_scaler, os.path.join(models_dir, 'lstm_target_scaler.joblib'))
+        
+        metadata = {
+            'time_steps': time_steps, 
+            'forecast_horizon': forecast_horizon
+        }
+        joblib.dump(metadata, os.path.join(models_dir, 'lstm_metadata.joblib'))
+        
+        mlflow.log_artifact(local_model_path)
+        mlflow.log_artifact(os.path.join(models_dir, 'lstm_preprocessor.joblib'))
+        mlflow.log_artifact(os.path.join(models_dir, 'lstm_target_scaler.joblib'))
+        mlflow.log_artifact(os.path.join(models_dir, 'lstm_metadata.joblib'))
+
+        print(f"Success! Run ID: {mlflow.active_run().info.run_id}")
     
     print("Model, Preprocessor, Target Scaler and Metadata saved.")
     return model

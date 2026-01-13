@@ -15,12 +15,49 @@ from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.impute import SimpleImputer
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+import mlflow
 import sys
+from mlflow.models import infer_signature
 
 # Add project root to path for imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 from src.utils.data_split import prepare_datasets
+
+# ==============================================================================
+# HELPER METRICS
+# ==============================================================================
+
+def calculate_metrics(y_true, y_pred):
+    """Calculates MAE, RMSE, Bias, and SMAPE (in original scale)."""
+    
+    # Ensure inputs are numpy arrays
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+    
+    # 1. Reverse Log Transformation (if you trained on logs)
+    # Assuming your model predicts log1p, we need to reverse it for real metrics
+    y_true_real = np.expm1(y_true)
+    y_pred_real = np.expm1(y_pred)
+    
+    # 2. Calculate Metrics
+    mae = mean_absolute_error(y_true_real, y_pred_real)
+    rmse = np.sqrt(mean_squared_error(y_true_real, y_pred_real))
+    bias = np.mean(y_pred_real - y_true_real)
+    
+    # SMAPE (Symmetric Mean Absolute Percentage Error)
+    numerator = np.abs(y_pred_real - y_true_real)
+    denominator = (np.abs(y_true_real) + np.abs(y_pred_real)) / 2.0
+    # Avoid division by zero
+    smape = np.mean(np.divide(numerator, denominator, out=np.zeros_like(numerator), where=denominator!=0)) * 100
+
+    return {
+        "mae": mae,
+        "rmse": rmse,
+        "bias": bias,
+        "smape": smape
+    }
 
 # ==============================================================================
 # MAIN TRAINING LOGIC
@@ -40,10 +77,12 @@ def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
         xgb.XGBRegressor: The trained model object.
     """
     
+    mlflow.set_tracking_uri("file:./mlruns")
+    
     # 1. Load Data
     print("Preparing data...")
     # Uses the robust split logic from utils
-    train_data, val_data, test_data = prepare_datasets()
+    train_data, val_data, _ = prepare_datasets()
     
     if train_data.empty:
         print("No training data available.")
@@ -108,14 +147,62 @@ def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
         reg_alpha=1,
         enable_categorical=True
     )
+    
+    with mlflow.start_run(run_name="XGBoost_Training"):  
+        mlflow.log_params({
+            "model_type": "xgboost",
+            "base_score": 0.5,
+            "booster": 'gbtree',
+            "tree_method": "hist",
+            "n_estimators": n_estimators,
+            "early_stopping_rounds": 10,
+            "objective": 'reg:squarederror',
+            "max_depth": max_depth,
+            "learning_rate": learning_rate,
+            "random_state": 42,
+            "reg_lambda": 10,
+            "reg_alpha": 1,
+            "enable_categorical": True
+        })
 
-    # 7. Train Model
-    print("Fitting XGBoost model...")
-    reg.fit(
-        X_train, y_train,
-        eval_set=[(X_train, y_train), (X_val, y_val)],
-        verbose=True
-    )
+        # 7. Train Model
+        print("Fitting XGBoost model...")
+        reg.fit(
+            X_train, y_train,
+            eval_set=[(X_train, y_train), (X_val, y_val)],
+            verbose=True
+        )
+        
+        # 8. Evaluate on Validation Set
+        y_val_pred_log = reg.predict(X_val)
+        metrics = calculate_metrics(y_val, y_val_pred_log)
+        
+        print(f"Metrics: MAE={metrics['mae']:.2f}, RMSE={metrics['rmse']:.2f}")
+        mlflow.log_metrics(metrics) # Logs all dictionary keys (mae, rmse, bias, smape)
+        
+        val_score = reg.score(X_val, y_val)
+        mlflow.log_metric("val_r2_log_space", val_score)
+        
+        full_pipeline = Pipeline([
+            ('preprocessor', preprocessor),
+            ('model', reg)
+        ])
+        
+        input_example = X_train_df.head(5)
+        
+        prediction = full_pipeline.predict(input_example)
+        signature = infer_signature(input_example, prediction)
+        
+        print("Logging Pipeline to MLflow...")
+        mlflow.sklearn.log_model(
+            full_pipeline, 
+            artifact_path="xgboost", 
+            signature=signature,
+            input_example=input_example
+        )
+    
+        print("Model and metrics logged to MLflow!")
+        print(f"Success! Run ID: {mlflow.active_run().info.run_id}")
 
     # 8. Save Artifacts
     models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models/xgboost')
