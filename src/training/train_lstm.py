@@ -16,7 +16,6 @@ import joblib
 import os
 import sys
 import mlflow
-import mlflow.tensorflow
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder, MinMaxScaler
@@ -248,8 +247,7 @@ def train_lstm(time_steps=30, forecast_horizon=7, epochs=20, batch_size=32, neur
         mlflow.log_metrics(metrics)
         
         print("Logging Model and Artifacts...")
-        mlflow.tensorflow.log_model(model, artifact_path="lstm_multistep")
-        
+
         # 7. Save Artifacts
         # --------------------------------------------------------------------------
         models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models/lstm')
