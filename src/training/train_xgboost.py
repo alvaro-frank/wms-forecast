@@ -130,6 +130,12 @@ def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
     # 5. Fit & Transform Data
     X_train = preprocessor.fit_transform(X_train_df)
     X_val = preprocessor.transform(X_val_df)
+    
+    checkpoint_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models', 'xgboost', 'checkpoints')
+    checkpoint_callback = xgb.callback.TrainingCheckPoint(
+        directory=checkpoint_dir,
+        interval=50
+    )
 
     # 6. Initialize XGBoost Regressor
     # Using 'hist' tree method for efficiency on large datasets
@@ -145,7 +151,8 @@ def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
         random_state=42,
         reg_lambda=10,
         reg_alpha=1,
-        enable_categorical=True
+        enable_categorical=True,
+        callbacks=[checkpoint_callback]
     )
     
     with mlflow.start_run(run_name="XGBoost_Training"):  
