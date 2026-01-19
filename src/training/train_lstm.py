@@ -227,6 +227,24 @@ def train_lstm(time_steps=30, forecast_horizon=7, epochs=20, batch_size=32, neur
         # 6. Train
         # --------------------------------------------------------------------------
         print("Fitting LSTM model...")
+        
+        # Directory for checkpoints
+        checkpoint_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models', 'lstm', 'checkpoints')
+        os.makedirs(checkpoint_dir, exist_ok=True)
+        
+        # Checkpoint: Save best model based on Val Loss
+        models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models/lstm')
+        os.makedirs(models_dir, exist_ok=True)
+        checkpoint_path = os.path.join(models_dir, 'lstm_best_checkpoint_model.keras')
+        
+        checkpoint_cb = tf.keras.callbacks.ModelCheckpoint(
+            filepath=checkpoint_path,
+            save_best_only=True,     # Only save when model improves
+            monitor='val_loss',      # Monitor validation loss
+            mode='min',              # Lower is better
+            verbose=1
+        )
+        
         early_stop = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5, restore_best_weights=True)
 
         history = model.fit(
@@ -234,7 +252,7 @@ def train_lstm(time_steps=30, forecast_horizon=7, epochs=20, batch_size=32, neur
             epochs=epochs,
             batch_size=batch_size,
             validation_data=(X_val_seq, y_val_seq),
-            callbacks=[early_stop],
+            callbacks=[early_stop, checkpoint_cb],
             verbose=1
         )
         
@@ -250,10 +268,7 @@ def train_lstm(time_steps=30, forecast_horizon=7, epochs=20, batch_size=32, neur
 
         # 7. Save Artifacts
         # --------------------------------------------------------------------------
-        models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models/lstm')
-        os.makedirs(models_dir, exist_ok=True)
-        
-        local_model_path = os.path.join(models_dir, 'lstm_model.keras')
+        local_model_path = os.path.join(models_dir, 'lstm_final_model.keras')
         model.save(local_model_path)
 
         joblib.dump(preprocessor, os.path.join(models_dir, 'lstm_preprocessor.joblib'))
