@@ -5,6 +5,12 @@ MKVENV := if not exist .venv ( $(PYTHON) -m venv .venv )
 RMVENV := if exist .venv rmdir /s /q .venv
 MAIN_SCRIPT = src/main.py
 PORT = 5000
+RESUME ?= False
+
+RESUME_FLAG = 
+ifeq ($(RESUME),True)
+	RESUME_FLAG = --resume
+endif
 
 help:
 	@echo "WMS Forecast - Available commands:"
@@ -26,7 +32,7 @@ clean:
 	$(RMVENV)
 
 train:
-	$(PY) $(MAIN_SCRIPT) train --model $(MODEL) $(ARGS)
+	$(PY) $(MAIN_SCRIPT) train --model $(MODEL) $(RESUME_FLAG) $(ARGS)
 
 evaluate:
 	$(PY) $(MAIN_SCRIPT) evaluate --model $(MODEL) $(if $(BRAND),--brand $(BRAND),)
@@ -37,6 +43,9 @@ test:
 mlflow:
 	$(VENV_BIN)\mlflow ui --port $(PORT)
 
-all: clean setup train evaluate test
+unit-test:
+	$(PY) -m pytest src/test/
+
+all: clean setup unit-test train evaluate test
 
 .DEFAULT_GOAL := help
