@@ -9,3 +9,4 @@ tqdm==4.66.5
 holidays
 dvc
 mlflow==3.5.0
+pytest==8.0.0
