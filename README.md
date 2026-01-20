@@ -72,7 +72,7 @@ make train MODEL=xgboost
 make train MODEL=lstm ARGS="--epochs 20 --batch_size 64"
 ```
 
-**Resume Training**: If a training run was interrupted or you want to improve an existing model:
+**Resume Training**: If a training run was interrupted or you want to improve an existing model.
 ```bash
 make train MODEL=xgboost RESUME=True
 ```
