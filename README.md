@@ -27,8 +27,8 @@ src/
   eval/             # Evaluation logic
   utils/            # Helper modules
   runs/             # Visualization plots
-  test/             # Unit tests
   main.py           # CLI Entry point
+tests/              # Unit tests
 Makefile            # Command automation
 requirements.txt    # Python dependencies
 README.md           # Project documentation
