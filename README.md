@@ -19,19 +19,19 @@ This project is a structured **MLOps pipeline**, featuring:
 
 ## 📂 Project Structure
 ```
-.dvc/               # DVC Configuration
-data/               # Data managed by DVC
-models/             # Saved models and checkpoints            
-src/
-  training/         # Training pipelines
-  eval/             # Evaluation logic
-  utils/            # Helper modules
-  runs/             # Visualization plots
-  main.py           # CLI Entry point
-tests/              # Unit tests
-Makefile            # Command automation
-requirements.txt    # Python dependencies
-README.md           # Project documentation
+├── .dvc/                  # DVC Configuration
+├── data/                  # Data managed by DVC
+├── models/                # Saved models and checkpoints            
+├── src/
+│   ├──  training/         # Training pipelines
+│   ├──  eval/             # Evaluation logic
+│   ├──  utils/            # Helper modules
+│   ├──  runs/             # Visualization plots
+│   └──  main.py           # CLI Entry point
+├── tests/                 # Unit tests
+├── Makefile               # Command automation
+├── requirements.txt       # Python dependencies
+├── README.md              # Project documentation
 ```
 
 ## 🛠️ Setup & Requirements
