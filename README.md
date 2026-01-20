@@ -63,6 +63,12 @@ You can run all pipelines via the CLI (`src/main.py`) or using the `Makefile` sh
 1. **Training**
 Train a model (XGBoost or LSTM). Artifacts and metrics are logged to **MLflow**.
 
+| Arg        | Purpose                                   | Default | Examples |
+|------------|-------------------------------------------|---------|----------|
+| `MODEL`    | Model architecture to train (`xgboost` or `lstm`)     | `xgboost`   | `MODEL=lstm` |
+| `ARGS` | Additional hyperparameters passed to script               | `''`   | `ARGS="--epochs 50 --batch_size 64"` |
+| `RESUME`     | Resume training from existing checkpoint                              | `False`    | `RESUME=True` |
+
 **Standard Training**:
 ```bash
 # Train XGBoost (Default)
@@ -80,6 +86,12 @@ make train MODEL=xgboost RESUME=True
 2. **Evaluation**
 
 Evaluate trained models against the test set. Calculates metrics like MAE and RMSE.
+
+| Arg        | Purpose                                   | Default | Examples |
+|------------|-------------------------------------------|---------|----------|
+| `MODEL`    | Model to evaluate (`xgboost` or `lstm`)     | `xgboost`   | `MODEL=lstm` |
+| `BRAND` | Filter evaluation for a specific Brand ID               | `None` (All brands)   | `BRAND=1791.0` |
+
 ```bash
 # Evaluate XGBoost
 make evaluate MODEL=xgboost
@@ -91,6 +103,13 @@ make evaluate MODEL=lstm BRAND="1791.0"
 3. **Visualization**
 
 Generate forecast plots for visual inspection of specific hierarchies.
+
+| Arg        | Purpose                                   | Default | Examples |
+|------------|-------------------------------------------|---------|----------|
+| `MODEL`    | Model predictions to visualize (`xgboost` or `lstm`)     | `xgboost`   | `MODEL=lstm` |
+| `BRAND` **(Required)** | Brand ID               | `1791.0`   | `BRAND=1791.0` |
+| `HIER` **(Required)** | Product Hierarchy ID               | `1090000600002.0`   | `HIER=1090000600002.0` |
+
 ```bash
 # Visual Test (Generates .png in runs/)
 make test MODEL=xgboost HIER="1090000600002.0" BRAND="1791.0"
@@ -125,11 +144,3 @@ The project forecasts **future daily quantities** using a lookback window approa
 1. **Filtering**: Keeps only top N Brands/Hierarchies by volume.
 2. **Imputation**: Handled via sklearn Pipelines (SimpleImputer).
 3. **Scaling**: MinMaxScaler for LSTM inputs; Log1p transformation for Targets.
-
-## ⚙️ Configuration
-
-Key parameters can be adjusted in the code or via CLI arguments:
-- **Feature Logic**: src/utils/features.py
-- **XGBoost Hyperparams**: src/training/train_xgboost.py
-- **LSTM Architecture**: src/training/train_lstm.py
-- **CLI Arguments**: src/main.py
