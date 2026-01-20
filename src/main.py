@@ -31,6 +31,7 @@ def run_train(args):
             learning_rate=args.learning_rate,
             max_depth=args.max_depth,
             n_estimators=args.n_estimators,
+            resume=args.resume
         )
     elif args.model == 'lstm':
         from src.training.train_lstm import train_lstm
@@ -41,7 +42,8 @@ def run_train(args):
             batch_size=args.batch_size,
             neurons=args.neurons,
             learning_rate=args.learning_rate,
-            dropout=args.dropout
+            dropout=args.dropout,
+            resume=args.resume
         )
 
 def run_evaluate(args):
@@ -129,6 +131,7 @@ def main():
     # --- TRAIN COMMAND ---
     train_parser = subparsers.add_parser('train', help='Train models')
     train_parser.add_argument('--model', default='xgboost', choices=['xgboost', 'lstm'])
+    train_parser.add_argument('--resume', action='store_true', help='Resume training from existing checkpoint')
     
     train_parser.add_argument('--learning_rate', type=float, default=0.01)
     

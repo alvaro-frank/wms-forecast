@@ -63,7 +63,7 @@ def calculate_metrics(y_true, y_pred):
 # MAIN TRAINING LOGIC
 # ==============================================================================
 
-def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
+def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000, resume=False):
     """
     Trains the XGBoost model using the configured hyperparameters.
     
@@ -72,12 +72,16 @@ def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
         max_depth (int): Maximum depth of a tree.
         n_estimators (int): Number of boosting rounds.
         use_filtering (bool): Whether to filter for top brands only.
+        resume (bool): Whether to resume training from an existing model checkpoint.
 
     Returns:
         xgb.XGBRegressor: The trained model object.
     """
     
     mlflow.set_tracking_uri("file:./mlruns")
+    
+    models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models/xgboost')
+    model_path = os.path.join(models_dir, 'xgboost_final_model.joblib')
     
     # 1. Load Data
     print("Preparing data...")
@@ -155,6 +159,22 @@ def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
         callbacks=[checkpoint_callback]
     )
     
+    xgb_model_origin = None
+    
+    if resume:
+        if os.path.exists(model_path):
+            print(f"RESUME: Loading existing model from {model_path}...")
+            try:
+                # Carregar o objeto XGBRegressor salvo anteriormente
+                old_reg = joblib.load(model_path)
+                # Extrair o 'Booster' para continuar o treino
+                xgb_model_origin = old_reg.get_booster()
+                print("RESUME: Model loaded successfully. Training will continue.")
+            except Exception as e:
+                print(f"RESUME: Failed to load model ({e}). Starting from scratch.")
+        else:
+            print(f"RESUME: No model found at {model_path}. Starting from scratch.")
+    
     with mlflow.start_run(run_name="XGBoost_Training"):  
         mlflow.log_params({
             "model_type": "xgboost",
@@ -162,7 +182,7 @@ def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
             "booster": 'gbtree',
             "tree_method": "hist",
             "n_estimators": n_estimators,
-            "early_stopping_rounds": 10,
+            "early_stopping_rounds": 50,
             "objective": 'reg:squarederror',
             "max_depth": max_depth,
             "learning_rate": learning_rate,
@@ -177,7 +197,8 @@ def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
         reg.fit(
             X_train, y_train,
             eval_set=[(X_train, y_train), (X_val, y_val)],
-            verbose=True
+            verbose=True,
+            xgb_model=xgb_model_origin
         )
         
         # 8. Evaluate on Validation Set
@@ -212,8 +233,6 @@ def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
         print(f"Success! Run ID: {mlflow.active_run().info.run_id}")
 
     # 8. Save Artifacts
-    models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models/xgboost')
-    
     # Save Preprocessor (Critical for inference consistency)
     preprocessor_path = os.path.join(models_dir, 'preprocessor.joblib')
     joblib.dump(preprocessor, preprocessor_path)
@@ -221,7 +240,6 @@ def train_xgboost(learning_rate=0.01, max_depth=10, n_estimators=10000):
     
     # Save Model
     os.makedirs(models_dir, exist_ok=True)
-    model_path = os.path.join(models_dir, 'xgboost_model.joblib')
     joblib.dump(reg, model_path)
     print(f"Model saved to {model_path}")
     

@@ -110,13 +110,27 @@ def calc_metrics_real_scale(y_true_scaled, y_pred_scaled, scaler):
 # MAIN TRAINING LOGIC
 # ==============================================================================
 
-def train_lstm(time_steps=30, forecast_horizon=7, epochs=20, batch_size=32, neurons=64, learning_rate=0.001, dropout=0.2):
+def train_lstm(time_steps=30, forecast_horizon=7, epochs=20, batch_size=32, neurons=64, learning_rate=0.001, dropout=0.2, resume=False):
     """
     Trains the LSTM model using explicit 3D Numpy arrays.
     
     Args:
-        use_filtering (bool): If True, uses only Top Brands/Hierarchies data.
+        time_steps (int): Number of past days to look back.
+        forecast_horizon (int): Number of future days to predict.
+        epochs (int): Number of training epochs.
+        batch_size (int): Size of training batches.
+        neurons (int): Number of LSTM neurons.
+        learning_rate (float): Learning rate for Adam optimizer.
+        dropout (float): Dropout rate for regularization.
+        resume (bool): Whether to resume training from last checkpoint.
     """
+    
+    models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models/lstm')
+    os.makedirs(models_dir, exist_ok=True)
+    
+    final_model_path = os.path.join(models_dir, 'lstm_final_model.keras')
+    best_model_path = os.path.join(models_dir, 'lstm_best_checkpoint_model.keras')
+    
     print(f"Starting LSTM Training")
     print(f"    Config: Lookback={time_steps}, Horizon={forecast_horizon}, Neurons={neurons}, Dropout={dropout}, LR={learning_rate}")
     
@@ -189,21 +203,40 @@ def train_lstm(time_steps=30, forecast_horizon=7, epochs=20, batch_size=32, neur
     print(f"    Train Input Shape: {X_train_seq.shape} (Samples, Steps, Features)")
     print(f"    Train Target Shape: {y_train_seq.shape} (Samples, Horizon)")
 
-    # 5. Build Model Architecture
+    # 5. Build or load Model Architecture
     # --------------------------------------------------------------------------
-    model = tf.keras.models.Sequential([
-        # Input Layer
-        tf.keras.layers.Input(shape=(X_train_seq.shape[1], X_train_seq.shape[2])),
-        
-        # LSTM Layer
-        tf.keras.layers.LSTM(neurons, return_sequences=False, activation='tanh'),
-        
-        # Dropout for regularization
-        tf.keras.layers.Dropout(dropout),
-        
-        # Output Layer
-        tf.keras.layers.Dense(forecast_horizon)
-    ])
+    model = None
+    
+    if resume:
+        load_path = None
+        if os.path.exists(final_model_path):
+            load_path = final_model_path
+        elif os.path.exists(best_model_path):
+            load_path = best_model_path
+            
+        if load_path:
+            print(f"RESUME: Loading existing model from {load_path}...")
+            try:
+                model = tf.keras.models.load_model(load_path, compile=False)
+                print("RESUME: Model loaded successfully.")
+            except Exception as e:
+                print(f"RESUME: Failed to load model ({e}). Building new one.")
+        else:
+            print("RESUME: No existing model found. Building new one.")
+    if model is None:
+        model = tf.keras.models.Sequential([
+            # Input Layer
+            tf.keras.layers.Input(shape=(X_train_seq.shape[1], X_train_seq.shape[2])),
+            
+            # LSTM Layer
+            tf.keras.layers.LSTM(neurons, return_sequences=False, activation='tanh'),
+            
+            # Dropout for regularization
+            tf.keras.layers.Dropout(dropout),
+            
+            # Output Layer
+            tf.keras.layers.Dense(forecast_horizon)
+        ])
     
     quantile = 0.80
     
@@ -233,8 +266,6 @@ def train_lstm(time_steps=30, forecast_horizon=7, epochs=20, batch_size=32, neur
         os.makedirs(checkpoint_dir, exist_ok=True)
         
         # Checkpoint: Save best model based on Val Loss
-        models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models/lstm')
-        os.makedirs(models_dir, exist_ok=True)
         checkpoint_path = os.path.join(models_dir, 'lstm_best_checkpoint_model.keras')
         
         checkpoint_cb = tf.keras.callbacks.ModelCheckpoint(
