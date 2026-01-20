@@ -1,71 +1,135 @@
 # Warehouse Management System Product Forecast
 
-A research project for **Time Series Forecasting in Warehouse Management System (WMS)** using **AI-based approaches**.  
-It includes models based on **XGBoost** and **LSTM neural networks**, evaluation pipelines, feature engineering utilities, and data visualization tools.
-
-The code was **originally developed in a Jupyter notebook and later adapted into a structured repository.**
+A production-grade research project for **Time Series Forecasting in Warehouse Management System (WMS)** using **AI-based approaches**.
 
 ![Forecast Plot](runs/forecast.png)
 
-## Features
-- Two forecasting models: **XGBoost** and **LSTM** (`src/models/`).
-- Automated **feature engineering** and **data preprocessing** (`src/utils/`).
-- Comprehensive **data analysis** scripts for exploring warehouse movements (`src/data_analysis/`).
-- **Evaluation** modules for both models with metrics and visualizations (`src/eval/`).
-- **End-to-end forecasting pipeline** for predicting daily transfer quantities.
+This project is a structured **MLOps pipeline**, featuring:
+- **Models**: XGBoost (Gradient Boosting) and LSTM (Deep Learning).
+- **MLOps**: Experiment tracking with MLflow and data versioning with DVC.
+- **Engineering**: Modular code, automated feature engineering, and Unit Testing.
+- **CI/CD Ready**: Makefile automation for setup, training, and evaluation.
 
-## Methodology
-The project forecasts **future daily quantities transferred inside a warehouse for each product** using aggregated time series data.  
-Each model leverages temporal and statistical features such as:
-- **Calendar features:** weekday, month, quarter, year, day of month, day of year.  
-- **Lag features:** lag1–lag13 representing previous days’ quantities.  
-- **Exponential moving averages (EWMAs):** smoothing trends with spans of 5, 20, and 50 days.  
-- **Categorical flags:** weekend and holiday indicators.
+## 🚀 Features
+- **Multi-Model Architecture**: Supports XGBoost (Regression) and LSTM (Multi-step forecasting).
+- **Resumable Training**: Ability to pause and resume training from checkpoints for both models.
+- **Automated Feature Engineering**: Generation of Lags, Differences, EWMAs, Cyclical Temporal features, weekend/holidays and Black Friday indicators and payday zone interval.
+- **Robust Evaluation**: Detailed metrics (MAE, RMSE, MAPE).
+- **Visualizations**: Automated generation of forecast plots and validation curves. 
 
-The forecasting process follows:
-1. **Data preprocessing** → Cleaning and feature generation  
-2. **Model training** → XGBoost and LSTM on the same input features  
-3. **Evaluation** → MAE, RMSE, MAPE, and visual comparison  
-4. **Visualization** → Forecast plots and diagnostic graphs  
-
-## Project Structure
+## 📂 Project Structure
 ```
+.dvc/               # DVC Configuration
+data/               # Data managed by DVC
+models/             # Saved models and checkpoints            
 src/
-  data_analysis/ # Exploratory analysis: monthly, weekly movements, outliers
-  eval/ # Evaluation scripts for LSTM & XGBoost
-  models/ # Model definitions (lstm.py, xgboost.py)
-  utils/ # Data handling, feature generation, visualization helpers
-  main.py # Entry point for training and forecasting
-  runs/ # Logs and plots
+  training/         # Training pipelines
+  eval/             # Evaluation logic
+  utils/            # Helper modules
+  runs/             # Visualization plots
+  test/             # Unit tests
+  main.py           # CLI Entry point
+Makefile            # Command automation
+requirements.txt    # Python dependencies
+README.md           # Project documentation
 ```
 
-## Requirements
-Install dependencies via:
+## 🛠️ Setup & Requirements
+
+This project uses `make` for automation and `dvc` for data management.
+
+1. **Clone the repository**:
 ```bash
-pip install -r src/requirements.txt
+git clone https://github.com/alvaro-frank/wms-forecast.git
+cd wms-forecast
 ```
 
-## Quick Start
-Run the main forecasting pipeline:
+2. **Setup Environment**: This command creates a virtual environment, installs dependencies, and pulls data via DVC.
 ```bash
-python src/main.py
+make setup
 ```
-This script loads the dataset, generates features, trains both models (XGBoost & LSTM), evaluates their performance, and visualizes forecast results in the `runs/` directory.
 
-## Outputs
-- `runs/forecast_*.png` — Forecast visualization (predicted vs. actual)
-- `runs/xgboost_results.txt` — XGBoost evaluation metrics
-- `runs/lstm_results.txt` — LSTM evaluation metrics
-- `runs/model_*_logs.txt` — Model training logs
+## ⚡ Quick Start
 
-## Configuration
-You can adjust key parameters in:
-- `src/utils/features.py` — Feature creation and lags
-- `src/models/xgboost.py` - Model architectures and hyperparameters for XGBoost
-- `src/models/lstm.py` — Model architectures and hyperparameters for LSTM
-- `src/main.py` — Training pipeline, forecasting horizon, and visualization options
+To run the **full end-to-end pipeline** (Clean -> Setup -> Unit Tests -> Train -> Evaluate -> Visual Test) in one go:
+```bash
+make all
+```
 
-## Repro Tips
-- Use a fixed random seed for reproducibility.
-- Standardize feature sets when comparing models.
-- Visualize both predictions and residuals to identify bias or trend drift.
+## 🏃 Usage
+
+You can run all pipelines via the CLI (`src/main.py`) or using the `Makefile` shortcuts.
+
+1. **Training**
+Train a model (XGBoost or LSTM). Artifacts and metrics are logged to **MLflow**.
+
+**Standard Training**:
+```bash
+# Train XGBoost (Default)
+make train MODEL=xgboost
+
+# Train LSTM with args
+make train MODEL=lstm ARGS="--epochs 20 --batch_size 64"
+```
+
+**Resume Training**: If a training run was interrupted or you want to improve an existing model:
+```bash
+make train MODEL=xgboost RESUME=True
+```
+
+2. **Evaluation**
+
+Evaluate trained models against the test set. Calculates metrics like MAE and RMSE.
+```bash
+# Evaluate XGBoost
+make evaluate MODEL=xgboost
+
+# Evaluate for a specific Brand
+make evaluate MODEL=lstm BRAND="1791.0"
+```
+
+3. **Visualization**
+
+Generate forecast plots for visual inspection of specific hierarchies.
+```bash
+# Visual Test (Generates .png in runs/)
+make test MODEL=xgboost HIER="1090000600002.0" BRAND="1791.0"
+```
+
+4. **Unit Testing**
+
+Ensure feature engineering and filtering logic are working correctly.
+```bash
+make unit-test
+```
+
+5. **Experiment Tracking**
+
+```bash
+# Dashboard will be available at http://localhost:5000
+make mlflow
+```
+
+## 🧠 Methodology
+
+The project forecasts **future daily quantities** using a lookback window approach.
+
+**Key Features**:
+- **Calendar**: Weekday, Month, Year, Holiday flags (Portuguese Calendar).
+- **Cyclical**: Sine/Cosine encoding for Week/Month/Year continuity.
+- **Lags**: 1, 2, 7, 15, 30 days.
+- **Trends**: Exponential Moving Averages (EWMA) with spans of 5, 20, 50.
+- **Events**: "Black Friday Week", "Pre-Christmas", "Payday Zone".
+
+**Preprocessing**:
+1. **Filtering**: Keeps only top N Brands/Hierarchies by volume.
+2. **Imputation**: Handled via sklearn Pipelines (SimpleImputer).
+3. **Scaling**: MinMaxScaler for LSTM inputs; Log1p transformation for Targets.
+
+## ⚙️ Configuration
+
+Key parameters can be adjusted in the code or via CLI arguments:
+- **Feature Logic**: src/utils/features.py
+- **XGBoost Hyperparams**: src/training/train_xgboost.py
+- **LSTM Architecture**: src/training/train_lstm.py
+- **CLI Arguments**: src/main.py
