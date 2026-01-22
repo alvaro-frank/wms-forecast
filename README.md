@@ -6,11 +6,12 @@ A production-grade research project for **Time Series Forecasting in Warehouse M
 
 This project is a structured **MLOps pipeline**, featuring:
 - **Models**: XGBoost (Gradient Boosting) and LSTM (Deep Learning).
-- **MLOps**: Experiment tracking with MLflow and data versioning with DVC.
+- **MLOps**: Experiment tracking with MLflow and data versioning with DVC. Fully containerized in Docker.
 - **Engineering**: Modular code, automated feature engineering, and Unit Testing.
 - **CI/CD Ready**: Makefile automation for setup, training, and evaluation.
 
 ## 🚀 Features
+- **Dockerized Environment**: Fully isolated development environment ensuring consistency across machines.
 - **Multi-Model Architecture**: Supports XGBoost (Regression) and LSTM (Multi-step forecasting).
 - **Resumable Training**: Ability to pause and resume training from checkpoints for both models.
 - **Automated Feature Engineering**: Generation of Lags, Differences, EWMAs, Cyclical Temporal features, weekend/holidays and Black Friday indicators and payday zone interval.
@@ -29,6 +30,8 @@ This project is a structured **MLOps pipeline**, featuring:
 │   ├──  runs/             # Visualization plots
 │   └──  main.py           # CLI Entry point
 ├── tests/                 # Unit tests
+├── docker-compose.yml     # Docker services configuration
+├── Dockerfile             # Docker image definition
 ├── Makefile               # Command automation
 ├── requirements.txt       # Python dependencies
 ├── README.md              # Project documentation
@@ -66,7 +69,7 @@ Train a model (XGBoost or LSTM). Artifacts and metrics are logged to **MLflow**.
 | Arg        | Purpose                                   | Default | Examples |
 |------------|-------------------------------------------|---------|----------|
 | `MODEL`    | Model architecture to train (`xgboost` or `lstm`)     | `xgboost`   | `MODEL=lstm` |
-| `ARGS` | Additional hyperparameters passed to script               | `''`   | `ARGS="--epochs 50 --batch_size 64"` |
+| `ARGS` | Additional hyperparameters passed to script               | `''`   | `ARGS='--epochs 50 --batch_size 64'` |
 | `RESUME`     | Resume training from existing checkpoint                              | `False`    | `RESUME=True` |
 
 **Standard Training**:
@@ -75,7 +78,7 @@ Train a model (XGBoost or LSTM). Artifacts and metrics are logged to **MLflow**.
 make train MODEL=xgboost
 
 # Train LSTM with args
-make train MODEL=lstm ARGS="--epochs 20 --batch_size 64"
+make train MODEL=lstm ARGS='--epochs 20 --batch_size 64'
 ```
 
 **Resume Training**: If a training run was interrupted or you want to improve an existing model.
@@ -97,7 +100,7 @@ Evaluate trained models against the test set. Calculates metrics like MAE and RM
 make evaluate MODEL=xgboost
 
 # Evaluate for a specific Brand
-make evaluate MODEL=lstm BRAND="1791.0"
+make evaluate MODEL=lstm BRAND='1791.0'
 ```
 
 3. **Visualization**
@@ -112,7 +115,7 @@ Generate forecast plots for visual inspection of specific hierarchies.
 
 ```bash
 # Visual Test (Generates .png in runs/)
-make test MODEL=xgboost HIER="1090000600002.0" BRAND="1791.0"
+make test MODEL=xgboost HIER='1090000600002.0' BRAND='1791.0'
 ```
 
 4. **Unit Testing**
@@ -138,9 +141,59 @@ The project forecasts **future daily quantities** using a lookback window approa
 - **Cyclical**: Sine/Cosine encoding for Week/Month/Year continuity.
 - **Lags**: 1, 2, 7, 15, 30 days.
 - **Trends**: Exponential Moving Averages (EWMA) with spans of 5, 20, 50.
-- **Events**: "Black Friday Week", "Pre-Christmas", "Payday Zone".
+- **Events**: 'Black Friday Week', 'Pre-Christmas', 'Payday Zone'.
 
 **Preprocessing**:
 1. **Filtering**: Keeps only top N Brands/Hierarchies by volume.
 2. **Imputation**: Handled via sklearn Pipelines (SimpleImputer).
 3. **Scaling**: MinMaxScaler for LSTM inputs; Log1p transformation for Targets.
+
+## 🐳 Docker Support
+
+This project is fully containerized to ensure environment consistency and simplify the execution of the machine learning pipelines (XGBoost and LSTM).
+
+**Prerequisites**
+- **Docker** and **Docker Compose** installed.
+- **NVIDIA Container Toolkit** (Optional: only if you intend to map a physical GPU to the container).
+
+**How to Run**
+1. **Build and Start**: Build the image and start the default service defined in `docker-compose.yml`.
+```bash
+docker compose up -d --build
+```
+
+2. **Pull Data**: Download the dataset and model artifacts using DVC inside the container.
+```bash
+docker compose run --rm wms-app dvc pull
+```
+
+3. **Train Models**: Run the training pipeline for XGBoost or LSTM.
+- **XGBoost**
+```bash
+docker compose run --rm wms-app python src/main.py train --model xgboost --n_estimators 1000 --learning_rate 0.1
+```
+
+- **LSTM**
+```bash
+docker compose run --rm wms-app python src/main.py train --model lstm --epochs 20 --batch_size 64
+```
+
+4. **Evaluate Performance**: Calculate metrics (MAE, RMSE, SMAPE) for the test set.
+```bash
+docker compose run --rm wms-app python src/main.py evaluate --model xgboost
+```
+
+5. **Visual Forecasting**: Generate forecast plots for a specific hierarchy and brand.
+```bash
+docker compose run --rm wms-app python src/main.py test --model lstm --hierarchy '1060000100001.0' --brand '1487.0'
+```
+
+6. **Unit Testing**: Ensure feature engineering logic is valid.
+```bash
+docker compose run --rm wms-app pytest tests/
+```
+
+7. **Interactive Shell**: Access the container's terminal for debugging.
+```bash
+docker compose run --rm --entrypoint bash wms-app
+```
