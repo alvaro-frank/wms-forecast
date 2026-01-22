@@ -25,7 +25,7 @@ from src.utils.data_split import prepare_datasets
 # Define Paths
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 DATA_PATH = os.path.join(ROOT_DIR, 'data', 'movimentos_saida_mercadoria.csv')
-MODEL_PATH = os.path.join(ROOT_DIR, 'models/xgboost', 'xgboost_model.joblib')
+MODEL_PATH = os.path.join(ROOT_DIR, 'models/xgboost', 'xgboost_final_model.joblib')
 PREPROCESSOR_PATH = os.path.join(ROOT_DIR, 'models/xgboost', 'preprocessor.joblib')
 
 # ==============================================================================

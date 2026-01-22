@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  wms-app:
+    build: .
+    container_name: wms-forecast-container
+    volumes:
+      - .:/app
+      - /app/.venv
+    environment:
+      - MLFLOW_TRACKING_URI=file:/app/mlruns
+      - CUDA_VISIBLE_DEVICES=-1
+    stdin_open: true
+    tty: true
+    # Use GPU NVIDIA from server
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
