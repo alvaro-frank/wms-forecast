@@ -24,12 +24,6 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Prepare API Database
-      env:
-        PYTHONPATH:
-      run: |
-        python -m src.utils.prepare_api_db
-
     - name: Setup DVC
       env:
         DVC_USER: ${{ secrets.DAGSHUB_USERNAME }}
@@ -40,6 +34,12 @@ jobs:
         dvc remote modify origin --project password $DVC_TOKEN
         
         dvc pull
+
+    - name: Prepare API Database
+      env:
+        PYTHONPATH:
+      run: |
+        python -m src.utils.prepare_api_db
 
     - name: Run Unit & Integration Tests
       env:
