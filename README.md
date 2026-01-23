@@ -240,7 +240,7 @@ curl -X POST "http://localhost:8002/predict" \
   "plot_path":"runs/api_forecast_1487.0_1060000100001.0.png"
 }
 ```
-## CI/CD Pipeline
+## ⚙️ CI/CD Pipeline
 
 This project implements a Continuous Integration pipeline via GitHub Actions to ensure code and model integrity on every push or pull request to the `main` or `master` branches.
 
