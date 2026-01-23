@@ -28,7 +28,7 @@ jobs:
       env:
         PYTHONPATH:
       run: |
-        python src/utils/prepare_api_db.py
+        python -m src.utils.prepare_api_db
 
     - name: Setup DVC
       env:
