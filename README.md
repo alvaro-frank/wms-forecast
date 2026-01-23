@@ -1,6 +1,7 @@
 # Warehouse Management System Product Forecast
 
 ![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688?logo=fastapi&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)
 ![XGBoost](https://img.shields.io/badge/XGBoost-2.1.1-red?logo=xgboost&logoColor=white)
 ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.16-orange?logo=tensorflow&logoColor=white)
@@ -35,6 +36,7 @@ This project is a structured **MLOps pipeline**, featuring:
 │   ├──  eval/             # Evaluation logic
 │   ├──  utils/            # Helper modules
 │   ├──  runs/             # Visualization plots
+│   ├──  api.py            # FastAPI Production Server
 │   └──  main.py           # CLI Entry point
 ├── tests/                 # Unit tests
 ├── docker-compose.yml     # Docker services configuration
@@ -203,4 +205,36 @@ docker compose run --rm wms-app pytest tests/
 7. **Interactive Shell**: Access the container's terminal for debugging.
 ```bash
 docker compose run --rm --entrypoint bash wms-app
+```
+## 🔌 API Usage
+
+The project exposes a REST API via FastAPI.
+
+![Forecast Plot](runs/api_forecast_1487.0_1060000100001.0.png)
+
+**Start the API**:
+```bash
+docker-compose up --build
+```
+
+**Make a Prediction**:
+```bash
+curl -X POST "http://localhost:8002/predict" \
+     -H "Content-Type: application/json" \
+     -d '{
+          "brand": "1487.0",
+          "hierarchy": "1060000100001.0",
+          "date": "2024-12-01"
+         }'
+```
+
+**Response**:
+```bash
+{
+  "brand":"1487.0",
+  "hierarchy":"1060000100001.0",
+  "forecast_date":"2024-12-01",
+  "predicted_quantity":61.31,
+  "plot_path":"runs/api_forecast_1487.0_1060000100001.0.png"
+}
 ```
