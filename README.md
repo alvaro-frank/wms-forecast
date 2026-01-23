@@ -129,7 +129,7 @@ Generate forecast plots for visual inspection of specific hierarchies.
 make test MODEL=xgboost HIER='1090000600002.0' BRAND='1791.0'
 ```
 
-4. **Unit Testing**
+4. **Unit & Integration Testing**
 
 Ensure feature engineering and filtering logic are working correctly.
 ```bash
@@ -199,7 +199,7 @@ docker compose run --rm wms-app python src/main.py evaluate --model xgboost
 docker compose run --rm wms-app python src/main.py test --model lstm --hierarchy '1060000100001.0' --brand '1487.0'
 ```
 
-6. **Unit Testing**: Ensure feature engineering logic is valid.
+6. **Unit & Integration Testing**: Ensure feature engineering logic is valid.
 ```bash
 docker compose run --rm wms-app pytest tests/
 ```
@@ -240,3 +240,20 @@ curl -X POST "http://localhost:8002/predict" \
   "plot_path":"runs/api_forecast_1487.0_1060000100001.0.png"
 }
 ```
+## CI/CD Pipeline
+
+This project implements a Continuous Integration pipeline via GitHub Actions to ensure code and model integrity on every push or pull request to the `main` or `master` branches.
+
+**Pipeline Workflow**:
+1. **Isolated Environment**: Sets up a Python 3.10 environment and installs all dependencies listed in `requirements.txt`.
+2. **Data & Model Synchronizaton**: Authenticates with DagsHub using GitHub Secrets and executes `dvc pull` to download the models and datasets required for testing.
+3. **Database**: Runs the `src/utils/prepare_api_db.py` script to generate the SQLite inference database within the runner.
+4. **Automated Testing**: Executes the full test suite via `pytest`, covering:
+     - **Unit Tests**: Validating feature engineering logic and data filtering.
+     - **Integration Tests**: Verifying the reliability of the FastAPI endpoints.
+
+**Required GitHub Secrets**
+
+To enable the pipeline in your own fork, you must add the following secrets in your repository settings:
+- **`DAGSHUB_USERNAME`**: Your DagsHub username.
+- **`DAGSHUB_TOKEN`**: Your DagsHub access token.
