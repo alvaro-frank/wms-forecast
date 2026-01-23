@@ -46,6 +46,9 @@ mlflow:
 unit-test:
 	$(PY) -m pytest tests/
 
+api-db-setup:
+	$(PY) src/utils/prepare_api_db.py
+
 all: clean setup unit-test train evaluate test
 
 .DEFAULT_GOAL := help

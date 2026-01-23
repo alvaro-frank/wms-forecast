@@ -4,14 +4,20 @@ services:
   wms-app:
     build: .
     container_name: wms-forecast-container
+    ports:
+      - "8002:8000"
     volumes:
       - .:/app
       - /app/.venv
     environment:
+      - PYTHONPATH=/app
       - MLFLOW_TRACKING_URI=file:/app/mlruns
       - CUDA_VISIBLE_DEVICES=-1
     stdin_open: true
     tty: true
+    command: >
+      sh -c "python src/utils/prepare_api_db.py && 
+             uvicorn src.api:app --host 0.0.0.0 --port 8000"
     # Use GPU NVIDIA from server
     # deploy:
     #   resources:
