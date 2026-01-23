@@ -30,6 +30,7 @@ This project is a structured **MLOps pipeline**, featuring:
 
 ## 📂 Project Structure
 ```
+├── .github/               # CI/CD configuration
 ├── .dvc/                  # DVC Configuration
 ├── data/                  # Data managed by DVC
 ├── models/                # Saved models and checkpoints            
