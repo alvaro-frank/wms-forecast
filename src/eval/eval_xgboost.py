@@ -214,7 +214,7 @@ if __name__ == "__main__":
     
     # 1. Define Paths
     MODEL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'models/xgboost'))
-    MODEL_PATH = os.path.join(MODEL_DIR, 'xgboost_model.joblib')
+    MODEL_PATH = os.path.join(MODEL_DIR, 'xgboost_final_model.joblib')
     PREPROCESSOR_PATH = os.path.join(MODEL_DIR, 'preprocessor.joblib')
 
     if os.path.exists(MODEL_PATH):

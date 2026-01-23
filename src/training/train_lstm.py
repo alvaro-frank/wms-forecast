@@ -128,7 +128,7 @@ def train_lstm(time_steps=30, forecast_horizon=7, epochs=20, batch_size=32, neur
     models_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'models/lstm')
     os.makedirs(models_dir, exist_ok=True)
     
-    final_model_path = os.path.join(models_dir, 'lstm_final_model.keras')
+    final_model_path = os.path.join(models_dir, 'lstm_model.keras')
     best_model_path = os.path.join(models_dir, 'lstm_best_checkpoint_model.keras')
     
     print(f"Starting LSTM Training")
@@ -299,7 +299,7 @@ def train_lstm(time_steps=30, forecast_horizon=7, epochs=20, batch_size=32, neur
 
         # 7. Save Artifacts
         # --------------------------------------------------------------------------
-        local_model_path = os.path.join(models_dir, 'lstm_final_model.keras')
+        local_model_path = os.path.join(models_dir, 'lstm_model.keras')
         model.save(local_model_path)
 
         joblib.dump(preprocessor, os.path.join(models_dir, 'lstm_preprocessor.joblib'))
