@@ -1,5 +1,12 @@
 # Warehouse Management System Product Forecast
 
+![Python](https://img.shields.io/badge/Python-3.10-blue?logo=python&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)
+![XGBoost](https://img.shields.io/badge/XGBoost-2.1.1-red?logo=xgboost&logoColor=white)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-2.16-orange?logo=tensorflow&logoColor=white)
+![DVC](https://img.shields.io/badge/Data-DVC-9cf?logo=dvc&logoColor=white)
+![MLflow](https://img.shields.io/badge/MLflow-3.5.0-0194E2?logo=mlflow&logoColor=white)
+
 A production-grade research project for **Time Series Forecasting in Warehouse Management System (WMS)** using **AI-based approaches**.
 
 ![Forecast Plot](runs/forecast.png)
