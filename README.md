@@ -213,8 +213,6 @@ docker compose run --rm --entrypoint bash wms-app
 
 The project exposes a REST API via FastAPI.
 
-![Forecast Plot](runs/api_forecast_1487.0_1060000100001.0.png)
-
 **Start the API**:
 ```bash
 docker-compose up --build
@@ -222,7 +220,8 @@ docker-compose up --build
 
 **Make a Prediction**:
 ```bash
-curl -X POST "http://localhost:8002/predict" \
+# Predict with XGBoost
+curl -X POST "http://localhost:8002/predict/xgboost" \
      -H "Content-Type: application/json" \
      -d '{
           "brand": "1487.0",
@@ -241,6 +240,38 @@ curl -X POST "http://localhost:8002/predict" \
   "plot_path":"runs/api_forecast_1487.0_1060000100001.0.png"
 }
 ```
+
+![XGBoost Plot](runs/api_forecast_1487.0_1060000100001.0.png)
+
+```bash
+# Predict with LSTM
+curl -X POST "http://localhost:8002/predict/lstm" \
+     -H "Content-Type: application/json" \
+     -d '{
+          "brand": "1487.0",
+          "hierarchy": "1060000100001.0",
+          "date": "2024-12-01"
+         }'
+```
+
+**Response**:
+```bash
+{
+     "brand":"1487.0",
+     "hierarchy":"1060000100001.0",
+     "forecast_horizon":
+          [{"date":"2024-12-01","qty":8.93},
+          {"date":"2024-12-02","qty":25.0},
+          {"date":"2024-12-03","qty":15.32},
+          {"date":"2024-12-04","qty":10.54},
+          {"date":"2024-12-05","qty":24.65},
+          {"date":"2024-12-06","qty":77.61},
+          {"date":"2024-12-07","qty":74.14}],
+     "plot_path":"runs/api_forecast_lstm_1487.0_1060000100001.0.png"}
+```
+
+![LSTM Plot](runs/api_forecast_lstm_1487.0_1060000100001.0.png)
+
 ## ⚙️ CI/CD Pipeline
 
 This project implements a Continuous Integration pipeline via GitHub Actions to ensure code and model integrity on every push or pull request to the `main` or `master` branches.

@@ -210,3 +210,4 @@ data/movimentos_saida_mercadoria.csv
 data/api_forecast.db
 /models
 /mlruns
+/runs
