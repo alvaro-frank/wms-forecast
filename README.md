@@ -230,19 +230,6 @@ curl -X POST "http://localhost:8002/predict/xgboost" \
          }'
 ```
 
-**Response**:
-```bash
-{
-  "brand":"1487.0",
-  "hierarchy":"1060000100001.0",
-  "forecast_date":"2024-12-01",
-  "predicted_quantity":61.31,
-  "plot_path":"runs/api_forecast_1487.0_1060000100001.0.png"
-}
-```
-
-![XGBoost Plot](runs/api_forecast_1487.0_1060000100001.0.png)
-
 ```bash
 # Predict with LSTM
 curl -X POST "http://localhost:8002/predict/lstm" \
@@ -255,6 +242,19 @@ curl -X POST "http://localhost:8002/predict/lstm" \
 ```
 
 **Response**:
+
+```bash
+{
+  "brand":"1487.0",
+  "hierarchy":"1060000100001.0",
+  "forecast_date":"2024-12-01",
+  "predicted_quantity":61.31,
+  "plot_path":"runs/api_forecast_1487.0_1060000100001.0.png"
+}
+```
+
+![XGBoost Plot](runs/api_forecast_1487.0_1060000100001.0.png)
+
 ```bash
 {
      "brand":"1487.0",
