@@ -9,6 +9,8 @@ import numpy as np
 import sqlite3
 import joblib
 import os
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from fastapi import FastAPI, HTTPException

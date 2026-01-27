@@ -9,14 +9,14 @@ def test_read_main_health():
     response = client.get("/docs")
     assert response.status_code == 200
 
-def test_predict_endpoint_success():
+def test_predict_endpoint_success_xgboost():
     """Testa uma predição válida para uma marca e hierarquia conhecidas."""
     payload = {
         "brand": "1487.0",
         "hierarchy": "1060000100001.0",
         "date": "2024-12-01"
     }
-    response = client.post("/predict", json=payload)
+    response = client.post("/predict/xgboost", json=payload)
     
     assert response.status_code == 200
     data = response.json()
@@ -24,13 +24,39 @@ def test_predict_endpoint_success():
     assert "plot_path" in data
     assert isinstance(data["predicted_quantity"], float)
 
-def test_predict_invalid_brand():
+def test_predict_invalid_brand_xgboost():
     """Verifica o comportamento da API para uma marca inexistente."""
     payload = {
         "brand": "9999.0", # Marca que não existe no SQLite
         "hierarchy": "1060000100001.0",
         "date": "2024-12-01"
     }
-    response = client.post("/predict", json=payload)
+    response = client.post("/predict/xgboost", json=payload)
+    # Deve retornar erro 500 ou 404 conforme a sua implementação
+    assert response.status_code == 500
+    
+def test_predict_endpoint_success_lstm():
+    """Testa uma predição válida para uma marca e hierarquia conhecidas."""
+    payload = {
+        "brand": "1487.0",
+        "hierarchy": "1060000100001.0",
+        "date": "2024-12-01"
+    }
+    response = client.post("/predict/lstm", json=payload)
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert "forecast_horizon" in data
+    assert "plot_path" in data
+    assert isinstance(data["forecast_horizon"], list)
+
+def test_predict_invalid_brand_lstm():
+    """Verifica o comportamento da API para uma marca inexistente."""
+    payload = {
+        "brand": "9999.0", # Marca que não existe no SQLite
+        "hierarchy": "1060000100001.0",
+        "date": "2024-12-01"
+    }
+    response = client.post("/predict/lstm", json=payload)
     # Deve retornar erro 500 ou 404 conforme a sua implementação
     assert response.status_code == 500
