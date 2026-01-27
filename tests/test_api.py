@@ -1,3 +1,9 @@
+# ==============================================================================
+# FILE: tests/test_api_wms.py
+# DESCRIPTION: Integration Tests for the WMS Forecast API.
+#              Verifies endpoints for XGBoost and LSTM predictions, including
+#              success cases and error handling using FastAPI TestClient.
+# ==============================================================================
 import pytest
 from fastapi.testclient import TestClient
 from src.api import app
@@ -5,12 +11,17 @@ from src.api import app
 client = TestClient(app)
 
 def test_read_main_health():
-    """Verifica se a API está online (Swagger UI)."""
+    """
+    Verifies if the API documentation (Swagger UI) is reachable.
+    """
     response = client.get("/docs")
     assert response.status_code == 200
 
 def test_predict_endpoint_success_xgboost():
-    """Testa uma predição válida para uma marca e hierarquia conhecidas."""
+    """
+    Tests a valid XGBoost prediction for a known Brand and Hierarchy.
+    Ensures that 'predicted_quantity' and 'plot_path' are present in the response.
+    """
     payload = {
         "brand": "1487.0",
         "hierarchy": "1060000100001.0",
@@ -25,18 +36,24 @@ def test_predict_endpoint_success_xgboost():
     assert isinstance(data["predicted_quantity"], float)
 
 def test_predict_invalid_brand_xgboost():
-    """Verifica o comportamento da API para uma marca inexistente."""
+    """
+    Verifies the API behavior when receiving a non-existent brand for XGBoost.
+    Expects a 500 or 404 error depending on implementation.
+    """
     payload = {
-        "brand": "9999.0", # Marca que não existe no SQLite
+        "brand": "9999.0",
         "hierarchy": "1060000100001.0",
         "date": "2024-12-01"
     }
     response = client.post("/predict/xgboost", json=payload)
-    # Deve retornar erro 500 ou 404 conforme a sua implementação
+
     assert response.status_code == 500
     
 def test_predict_endpoint_success_lstm():
-    """Testa uma predição válida para uma marca e hierarquia conhecidas."""
+    """
+    Tests a valid LSTM multi-step prediction for a known Brand and Hierarchy.
+    Ensures that 'forecast_horizon' list and 'plot_path' are returned.
+    """
     payload = {
         "brand": "1487.0",
         "hierarchy": "1060000100001.0",
@@ -51,12 +68,15 @@ def test_predict_endpoint_success_lstm():
     assert isinstance(data["forecast_horizon"], list)
 
 def test_predict_invalid_brand_lstm():
-    """Verifica o comportamento da API para uma marca inexistente."""
+    """
+    Verifies the API behavior when receiving a non-existent brand for LSTM.
+    Expects a 500 or 404 error depending on implementation.
+    """
     payload = {
-        "brand": "9999.0", # Marca que não existe no SQLite
+        "brand": "9999.0",
         "hierarchy": "1060000100001.0",
         "date": "2024-12-01"
     }
     response = client.post("/predict/lstm", json=payload)
-    # Deve retornar erro 500 ou 404 conforme a sua implementação
+
     assert response.status_code == 500
