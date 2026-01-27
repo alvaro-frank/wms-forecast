@@ -17,4 +17,4 @@ RUN pip install --upgrade pip && \
 
 COPY . .
 
-CMD ["python", "src/main.py", "--model=xgboost"]
+CMD ["uvicorn", "src.api_wms:app", "--host", "0.0.0.0", "--port", "80"]
