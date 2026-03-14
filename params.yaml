@@ -1,0 +1,20 @@
+base:
+  random_state: 42
+  target_col: "quantidade_saida"
+
+data_split:
+  test_size: 0.2
+  lookback_window: 30
+
+xgboost:
+  n_estimators: 100
+  max_depth: 6
+  learning_rate: 0.01
+  subsample: 0.8
+
+lstm:
+  units_layer_1: 50
+  units_layer_2: 50
+  epochs: 20
+  batch_size: 32
+  learning_rate: 0.001
