@@ -1,29 +1,13 @@
 version: '3.8'
 
 services:
-  wms-app:
-    build: .
-    container_name: wms-forecast-container
-    ports:
-      - "8002:80"
+  training-job:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: wms-forecast-training
+    command: make train_xgboost
     volumes:
-      - .:/app
-      - /app/.venv
+      - ./:/app
     environment:
-      - PYTHONPATH=/app
-      - MLFLOW_TRACKING_URI=file:/app/mlruns
-      - CUDA_VISIBLE_DEVICES=-1
-    stdin_open: true
-    tty: true
-    restart: always
-    command: >
-      sh -c "python src/utils/prepare_api_db.py && 
-             uvicorn src.api:app --host 0.0.0.0 --port 80"
-    # Use GPU NVIDIA from server
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+      - PYTHONUNBUFFERED=1
