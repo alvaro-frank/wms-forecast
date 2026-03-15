@@ -52,12 +52,6 @@ jobs:
         
         dvc pull
 
-    - name: Prepare API Database
-      env:
-        PYTHONPATH:
-      run: |
-        python -m src.utils.prepare_api_db
-
     - name: Run Unit & Integration Tests
       env:
         PYTHONPATH: .
